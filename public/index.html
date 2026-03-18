@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KindPlate – Share Food, Spread Kindness</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz@14..32&family=Playfair+Display:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- Navbar -->
+  <nav class="glass-nav" id="navbar">
+    <div class="logo">KindPlate</div>
+    <div class="nav-links">
+      <a href="#home">Home</a>
+      <a href="#donate">Donate</a>
+      <a href="#feed">Find Food</a>
+      <a href="#about">About</a>
+      <a href="#contact">Contact</a>
+      <button class="login-btn" id="loginBtn">Login</button>
+      <button class="theme-toggle" id="themeToggle"><i class="fas fa-moon"></i></button>
+    </div>
+  </nav>
+
+  <!-- Hero Section -->
+  <section class="hero" id="home">
+    <div class="hero-overlay"></div>
+    <div class="container hero-content">
+      <h1>Share Food.<br>Spread Kindness.</h1>
+      <p>Your extra meal can be someone’s only meal.</p>
+      <div class="hero-buttons">
+        <button class="btn btn-primary" id="heroDonate">Donate Food</button>
+        <button class="btn btn-outline" id="heroFind">Find Meals</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Trust Section -->
+  <section class="container reveal">
+    <div class="trust-banner">
+      <span>Trusted by 10,000+ donors</span>
+      <div class="trust-icons">
+        <i class="fas fa-hand-holding-heart"></i>
+        <i class="fas fa-seedling"></i>
+        <i class="fas fa-utensils"></i>
+      </div>
+    </div>
+  </section>
+
+  <!-- How It Works -->
+  <section class="container reveal" id="how">
+    <h2 class="section-title">How it works</h2>
+    <div class="steps-grid">
+      <div class="step-card"><i class="fas fa-cloud-upload-alt step-icon"></i><h3>1. Upload food</h3><p>Share details & photo of your extra meal.</p></div>
+      <div class="step-card"><i class="fas fa-bell step-icon"></i><h3>2. NGO notified</h3><p>Nearby volunteers get an alert.</p></div>
+      <div class="step-card"><i class="fas fa-smile step-icon"></i><h3>3. Food delivered</h3><p>Fresh meals reach those in need.</p></div>
+    </div>
+  </section>
+
+  <!-- Live Food Feed -->
+  <section class="container" id="feed">
+    <h2 class="section-title">Live food feed</h2>
+    <div class="filter-bar">
+      <button class="filter-btn active" data-filter="all">All</button>
+      <button class="filter-btn" data-filter="Fresh">Fresh</button>
+      <button class="filter-btn" data-filter="Urgent">Urgent 🔥</button>
+      <div class="search-box">
+        <i class="fas fa-search"></i>
+        <input type="text" id="searchInput" placeholder="Search food...">
+      </div>
+    </div>
+    <div class="food-grid" id="foodGrid">
+      <!-- injected by JS -->
+    </div>
+  </section>
+
+  <!-- Donate Section -->
+  <section class="container reveal" id="donate">
+    <h2 class="section-title">Make a donation</h2>
+    <div class="donate-card">
+      <form id="donateForm" enctype="multipart/form-data">
+        <div class="form-group">
+          <label>Food name</label>
+          <input type="text" name="foodName" required>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Quantity</label>
+            <input type="text" name="quantity" placeholder="e.g., 4 servings" required>
+          </div>
+          <div class="form-group">
+            <label>Location</label>
+            <input type="text" name="location" placeholder="e.g., Downtown" required>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Expiry date/time</label>
+            <input type="datetime-local" name="expiry" required>
+          </div>
+          <div class="form-group">
+            <label>Food image</label>
+            <input type="file" name="image" accept="image/*" required id="foodImage">
+          </div>
+        </div>
+        <div id="analyzeResult" class="analyze-result"></div>
+        <button type="submit" class="btn btn-primary full-width">Post Donation</button>
+      </form>
+      <div id="donateMessage" class="donate-message"></div>
+    </div>
+  </section>
+
+  <!-- Find Food (same as feed but separate anchor) -->
+  <section class="container" id="find">
+    <h2 class="section-title">Find food near you</h2>
+    <div class="food-grid" id="findGrid"></div>
+  </section>
+
+  <!-- User Dashboard -->
+  <section class="container reveal" id="dashboard">
+    <h2 class="section-title">Your impact</h2>
+    <div id="dashboardContent" class="dashboard-grid"></div>
+  </section>
+
+  <!-- AI Assistant Jarvis – dedicated section -->
+  <section class="container jarvis-section reveal">
+    <h2 class="section-title">Meet Jarvis, your AI guide</h2>
+    <div class="jarvis-container">
+      <div class="jarvis-chat" id="jarvisChat">
+        <div class="chat-messages" id="jarvisMessages">
+          <div class="msg bot-msg">Hi! I'm Jarvis. How can I help you today? 😊</div>
+        </div>
+        <div class="chat-input-area">
+          <input type="text" id="jarvisInput" placeholder="Ask me anything...">
+          <button id="jarvisSend"><i class="fas fa-paper-plane"></i></button>
+        </div>
+      </div>
+      <div class="jarvis-info">
+        <p>Jarvis can help with food safety, donation ideas, NGO suggestions, and more.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Emotional Story Section (using local image) -->
+  <section class="container reveal story-section">
+    <div class="story-grid">
+      <div class="story-text">
+        <h2>One small act can change a life.</h2>
+        <p>Last night, a single donation fed a homeless family. Your leftovers can be someone's hope.</p>
+      </div>
+      <div class="story-image">
+        <img src="/images/food1.jpg" alt="Happy kids eating">
+      </div>
+    </div>
+  </section>
+
+  <!-- Reviews Section (using local images) -->
+  <section class="container reveal">
+    <h2 class="section-title">Kind words</h2>
+    <div class="reviews-slider">
+      <div class="review-card">
+        <img src="/images/placeholder.jpg" alt="User">
+        <h4>Sarah M.</h4>
+        <p>"This platform helped me donate food easily. Loved it!"</p>
+      </div>
+      <div class="review-card">
+        <img src="/images/placeholder.jpg" alt="User">
+        <h4>David K.</h4>
+        <p>"I found fresh meals near me and picked them up. Great initiative."</p>
+      </div>
+      <div class="review-card">
+        <img src="/images/placeholder.jpg" alt="User">
+        <h4>Priya R.</h4>
+        <p>"Every donation feels like a warm hug. Thank you KindPlate!"</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Impact Counters -->
+  <section class="container reveal">
+    <div class="impact-grid">
+      <div class="counter-item"><h3 id="mealsCounter">0</h3><p>Meals donated</p></div>
+      <div class="counter-item"><h3 id="peopleCounter">0</h3><p>People helped</p></div>
+      <div class="counter-item"><h3 id="wasteCounter">0</h3><p>kg waste reduced</p></div>
+    </div>
+  </section>
+
+  <!-- Contact Section -->
+  <section class="container reveal" id="contact">
+    <h2 class="section-title">Get in touch</h2>
+    <div class="contact-card">
+      <form id="contactForm">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Name</label>
+            <input type="text" name="name" required>
+          </div>
+          <div class="form-group">
+            <label>Email</label>
+            <input type="email" name="email" required>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Message</label>
+          <textarea name="message" rows="4" required></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary">Send Message</button>
+      </form>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <p>© KindPlate — share a meal, change a life.</p>
+  </footer>
+
+  <!-- Floating Chat Button (Jarvis) -->
+  <button class="chat-btn" id="chatBtn"><i class="fas fa-robot"></i></button>
+  <div class="chat-window" id="chatWindow">
+    <div class="chat-header">Jarvis <span>🤖</span></div>
+    <div class="chat-msgs" id="chatMsgs">
+      <div class="msg bot-msg">Hi! I'm Jarvis. How can I help you today? 😊</div>
+    </div>
+    <div class="chat-input">
+      <input type="text" id="chatInput" placeholder="Ask me anything...">
+      <button id="sendMsg"><i class="fas fa-paper-plane"></i></button>
+    </div>
+  </div>
+
+  <!-- Auth Modal -->
+  <div id="authModal" class="modal">
+    <div class="modal-content glass">
+      <span class="close">&times;</span>
+      <h2 id="modalTitle">Login</h2>
+      <form id="authForm">
+        <div id="nameField" class="form-group" style="display: none;">
+          <label>Name</label>
+          <input type="text" name="name">
+        </div>
+        <div class="form-group">
+          <label>Email</label>
+          <input type="email" name="email" required>
+        </div>
+        <div class="form-group">
+          <label>Password</label>
+          <input type="password" name="password" required>
+        </div>
+        <button type="submit" class="btn btn-primary full-width" id="authSubmit">Login</button>
+      </form>
+      <p id="toggleAuth">Don't have an account? <a href="#" id="switchToSignup">Sign up</a></p>
+      <div id="authMessage"></div>
+    </div>
+  </div>
+
+  <!-- Confetti library -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1"></script>
+  <script src="script.js"></script>
+</body>
+</html>
