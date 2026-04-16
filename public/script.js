@@ -92,7 +92,49 @@ document.addEventListener('DOMContentLoaded', () => {
   setupDonateForm();
   setupHeroButtons();
   setupContactForm();
+  setupHamburger();
 });
+
+// ========== HAMBURGER MENU ==========
+function setupHamburger() {
+  const hamburger = document.getElementById('hamburger');
+  const navLinks = document.getElementById('navLinks');
+  const backdrop = document.getElementById('navBackdrop');
+  if (!hamburger || !navLinks || !backdrop) return;
+
+  function openMenu() {
+    hamburger.classList.add('open');
+    navLinks.classList.add('open');
+    backdrop.classList.add('open');
+    body.classList.add('nav-open');
+    hamburger.setAttribute('aria-expanded', 'true');
+  }
+
+  function closeMenu() {
+    hamburger.classList.remove('open');
+    navLinks.classList.remove('open');
+    backdrop.classList.remove('open');
+    body.classList.remove('nav-open');
+    hamburger.setAttribute('aria-expanded', 'false');
+  }
+
+  hamburger.addEventListener('click', () => {
+    hamburger.classList.contains('open') ? closeMenu() : openMenu();
+  });
+
+  // Close on backdrop click
+  backdrop.addEventListener('click', closeMenu);
+
+  // Close when a nav link is tapped
+  navLinks.querySelectorAll('a.nav-link').forEach(link => {
+    link.addEventListener('click', closeMenu);
+  });
+
+  // Close on Escape key
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeMenu();
+  });
+}
 
 // ========== AUTH (same as before) ==========
 function setupAuth() {
@@ -361,23 +403,28 @@ async function fetchUserDonations() {
 // ========== COUNTERS ==========
 function animateCounters() {
   const counters = [
-    { el: document.getElementById('mealsCounter'), target: 2840, current: 0 },
-    { el: document.getElementById('peopleCounter'), target: 1870, current: 0 },
-    { el: document.getElementById('wasteCounter'), target: 1250, current: 0 }
+    { el: document.getElementById('mealsCounter'), target: 2840, suffix: '' },
+    { el: document.getElementById('peopleCounter'), target: 1870, suffix: '' },
+    { el: document.getElementById('wasteCounter'), target: 1250, suffix: '' },
+    { el: document.getElementById('ngoCounter'), target: 52, suffix: '' }
   ];
   counters.forEach(c => {
-    const step = Math.ceil(c.target / 50);
+    if (!c.el) return;
+    let current = 0;
+    const step = Math.ceil(c.target / 60);
     const update = setInterval(() => {
-      c.current += step;
-      if (c.current >= c.target) { c.current = c.target; clearInterval(update); }
-      c.el.innerText = c.current;
-    }, 30);
+      current += step;
+      if (current >= c.target) { current = c.target; clearInterval(update); }
+      c.el.innerText = current.toLocaleString() + c.suffix;
+    }, 25);
   });
 }
 
 // ========== CHATBOT (FLOATING) with enhanced AI ==========
 function setupChatbot() {
   chatBtn.addEventListener('click', () => chatWindow.classList.toggle('open'));
+  const chatCloseBtn = document.getElementById('chatCloseBtn');
+  if (chatCloseBtn) chatCloseBtn.addEventListener('click', () => chatWindow.classList.remove('open'));
 
   const botKnowledge = {
     greetings: ['hi', 'hello', 'hey', 'greetings'],
@@ -594,8 +641,10 @@ function setupJarvisSection() {
 
 // ========== HERO BUTTONS ==========
 function setupHeroButtons() {
-  heroDonate.addEventListener('click', () => document.getElementById('donate').scrollIntoView({ behavior: 'smooth' }));
-  heroFind.addEventListener('click', () => document.getElementById('feed').scrollIntoView({ behavior: 'smooth' }));
+  if (heroDonate) heroDonate.addEventListener('click', () => document.getElementById('donate').scrollIntoView({ behavior: 'smooth' }));
+  if (heroFind) heroFind.addEventListener('click', () => document.getElementById('feed').scrollIntoView({ behavior: 'smooth' }));
+  const heroDonate2 = document.getElementById('heroDonate2');
+  if (heroDonate2) heroDonate2.addEventListener('click', () => document.getElementById('donate').scrollIntoView({ behavior: 'smooth' }));
 }
 
 // ========== CONTACT FORM ==========

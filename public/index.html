@@ -1,228 +1,482 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>KindPlate – Share Food, Spread Kindness</title>
+  <meta name="description"
+    content="KindPlate connects food donors with NGOs and volunteers to reduce waste and feed those in need. Join 10,000+ donors today.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz@14..32&family=Playfair+Display:wght@400;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,600&family=Jost:wght@200;300;400;500;600&family=Cormorant:wght@300;400;500&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <link rel="stylesheet" href="styles.css">
 </head>
+
 <body>
-  <!-- Navbar -->
+
+  <!-- ═══ NAVBAR ═══ -->
   <nav class="glass-nav" id="navbar">
-    <div class="logo">KindPlate</div>
-    <div class="nav-links">
-      <a href="#home">Home</a>
-      <a href="#donate">Donate</a>
-      <a href="#feed">Find Food</a>
-      <a href="#about">About</a>
-      <a href="#contact">Contact</a>
-      <button class="login-btn" id="loginBtn">Login</button>
-      <button class="theme-toggle" id="themeToggle"><i class="fas fa-moon"></i></button>
+    <div class="logo">
+      <span class="logo-icon">🍽️</span>
+      <span class="logo-text">Kind<span class="logo-accent">Plate</span></span>
+    </div>
+    <div class="nav-right">
+      <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode"><i class="fas fa-moon"></i></button>
+      <button class="hamburger" id="hamburger" aria-label="Open menu" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+    <div class="nav-links" id="navLinks">
+      <a href="#home" class="nav-link">Home</a>
+      <a href="#how" class="nav-link">How It Works</a>
+      <a href="#donate" class="nav-link">Donate</a>
+      <a href="#feed" class="nav-link">Find Food</a>
+      <a href="#contact" class="nav-link">Contact</a>
+      <button class="login-btn" id="loginBtn"><i class="fas fa-user"></i> Login</button>
     </div>
   </nav>
+  <div class="nav-backdrop" id="navBackdrop"></div>
 
-  <!-- Hero Section -->
+  <!-- ═══ HERO ═══ -->
   <section class="hero" id="home">
-    <div class="hero-overlay"></div>
+    <!-- Animated blobs -->
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+    <div class="blob blob-3"></div>
+    <!-- Floating food emojis -->
+    <div class="float-emoji" style="--d:0s;--x:10%;--y:20%">🥗</div>
+    <div class="float-emoji" style="--d:1.2s;--x:80%;--y:15%">🍱</div>
+    <div class="float-emoji" style="--d:0.6s;--x:88%;--y:65%">🥘</div>
+    <div class="float-emoji" style="--d:1.8s;--x:5%;--y:75%">🍛</div>
+    <div class="float-emoji" style="--d:2.4s;--x:50%;--y:85%">🥙</div>
+
     <div class="container hero-content">
-      <h1>Share Food.<br>Spread Kindness.</h1>
-      <p>Your extra meal can be someone’s only meal.</p>
+      <div class="hero-badge"><span class="pulse-dot"></span> Live — 2,840 meals shared today</div>
+      <h1 class="hero-title">
+        Share Food.
+        <br><span class="gradient-text">Spread Kindness.</span>
+      </h1>
+      <p class="hero-subtitle">Your extra meal can be someone's <em>only</em> meal. Join thousands making a difference —
+        one plate at a time.</p>
       <div class="hero-buttons">
-        <button class="btn btn-primary" id="heroDonate">Donate Food</button>
-        <button class="btn btn-outline" id="heroFind">Find Meals</button>
+        <button class="btn btn-primary glow-btn" id="heroDonate">
+          <i class="fas fa-heart"></i> Donate Food
+        </button>
+        <button class="btn btn-outline" id="heroFind">
+          <i class="fas fa-map-marker-alt"></i> Find Meals
+        </button>
+      </div>
+      <div class="hero-stats">
+        <div class="hstat"><strong>10K+</strong><span>Donors</span></div>
+        <div class="hstat-divider"></div>
+        <div class="hstat"><strong>2.8K</strong><span>Meals today</span></div>
+        <div class="hstat-divider"></div>
+        <div class="hstat"><strong>50+</strong><span>NGO partners</span></div>
+      </div>
+    </div>
+
+    <!-- Scroll indicator -->
+    <div class="scroll-indicator">
+      <div class="scroll-dot"></div>
+    </div>
+  </section>
+
+  <!-- ═══ TRUST STRIP ═══ -->
+  <section class="trust-strip reveal">
+    <div class="container trust-inner">
+      <span class="trust-label">Trusted by</span>
+      <div class="trust-logos">
+        <span><i class="fas fa-handshake"></i> FeedIndia</span>
+        <span><i class="fas fa-leaf"></i> GreenShare</span>
+        <span><i class="fas fa-utensils"></i> MealBridge</span>
+        <span><i class="fas fa-heart"></i> HopeShare</span>
+        <span><i class="fas fa-globe"></i> ZeroHunger</span>
       </div>
     </div>
   </section>
 
-  <!-- Trust Section -->
-  <section class="container reveal">
-    <div class="trust-banner">
-      <span>Trusted by 10,000+ donors</span>
-      <div class="trust-icons">
-        <i class="fas fa-hand-holding-heart"></i>
-        <i class="fas fa-seedling"></i>
-        <i class="fas fa-utensils"></i>
-      </div>
-    </div>
-  </section>
-
-  <!-- How It Works -->
+  <!-- ═══ HOW IT WORKS ═══ -->
   <section class="container reveal" id="how">
-    <h2 class="section-title">How it works</h2>
+    <div class="section-header">
+      <span class="section-badge">Simple Process</span>
+      <h2 class="section-title">How <span class="gradient-text">it works</span></h2>
+      <p class="section-sub">Three simple steps to share love through food</p>
+    </div>
     <div class="steps-grid">
-      <div class="step-card"><i class="fas fa-cloud-upload-alt step-icon"></i><h3>1. Upload food</h3><p>Share details & photo of your extra meal.</p></div>
-      <div class="step-card"><i class="fas fa-bell step-icon"></i><h3>2. NGO notified</h3><p>Nearby volunteers get an alert.</p></div>
-      <div class="step-card"><i class="fas fa-smile step-icon"></i><h3>3. Food delivered</h3><p>Fresh meals reach those in need.</p></div>
+      <div class="step-card">
+        <div class="step-number">01</div>
+        <div class="step-icon-wrap"><i class="fas fa-camera step-icon"></i></div>
+        <h3>Upload Food</h3>
+        <p>Share details &amp; a photo of your extra meal in under 60 seconds.</p>
+        <div class="step-arrow"><i class="fas fa-arrow-right"></i></div>
+      </div>
+      <div class="step-card">
+        <div class="step-number">02</div>
+        <div class="step-icon-wrap"><i class="fas fa-bell step-icon"></i></div>
+        <h3>NGO Notified</h3>
+        <p>Nearby volunteers and partner NGOs receive an instant alert.</p>
+        <div class="step-arrow"><i class="fas fa-arrow-right"></i></div>
+      </div>
+      <div class="step-card">
+        <div class="step-number">03</div>
+        <div class="step-icon-wrap"><i class="fas fa-hands-holding-heart step-icon"></i></div>
+        <h3>Meal Delivered</h3>
+        <p>Fresh meals reach those in need — with zero effort from you.</p>
+        <div class="step-arrow last"></div>
+      </div>
     </div>
   </section>
 
-  <!-- Live Food Feed -->
+  <!-- ═══ IMPACT COUNTERS ═══ -->
+  <section class="impact-section reveal">
+    <div class="impact-bg"></div>
+    <div class="container">
+      <div class="section-header light">
+        <span class="section-badge light">Our Impact</span>
+        <h2 class="section-title">Numbers that <span class="gradient-text-warm">matter</span></h2>
+      </div>
+      <div class="impact-grid">
+        <div class="counter-item">
+          <div class="counter-icon"><i class="fas fa-bowl-food"></i></div>
+          <h3 id="mealsCounter">0</h3>
+          <p>Meals Donated</p>
+        </div>
+        <div class="counter-item">
+          <div class="counter-icon"><i class="fas fa-people-group"></i></div>
+          <h3 id="peopleCounter">0</h3>
+          <p>People Fed</p>
+        </div>
+        <div class="counter-item">
+          <div class="counter-icon"><i class="fas fa-recycle"></i></div>
+          <h3 id="wasteCounter">0</h3>
+          <p>Kg Waste Reduced</p>
+        </div>
+        <div class="counter-item">
+          <div class="counter-icon"><i class="fas fa-building-ngo"></i></div>
+          <h3 id="ngoCounter">0</h3>
+          <p>NGO Partners</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ LIVE FOOD FEED ═══ -->
   <section class="container" id="feed">
-    <h2 class="section-title">Live food feed</h2>
+    <div class="section-header">
+      <span class="section-badge">Real-Time</span>
+      <h2 class="section-title">Live food <span class="gradient-text">feed</span></h2>
+      <p class="section-sub">Browse available donations near you right now</p>
+    </div>
     <div class="filter-bar">
-      <button class="filter-btn active" data-filter="all">All</button>
-      <button class="filter-btn" data-filter="Fresh">Fresh</button>
-      <button class="filter-btn" data-filter="Urgent">Urgent 🔥</button>
+      <button class="filter-btn active" data-filter="all"><i class="fas fa-border-all"></i> All</button>
+      <button class="filter-btn" data-filter="Fresh"><i class="fas fa-leaf"></i> Fresh</button>
+      <button class="filter-btn" data-filter="Urgent"><i class="fas fa-fire"></i> Urgent</button>
       <div class="search-box">
         <i class="fas fa-search"></i>
         <input type="text" id="searchInput" placeholder="Search food...">
       </div>
     </div>
-    <div class="food-grid" id="foodGrid">
-      <!-- injected by JS -->
+    <div class="food-grid" id="foodGrid"></div>
+  </section>
+
+  <!-- ═══ DONATE SECTION ═══ -->
+  <section class="donate-section reveal" id="donate">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-badge">Give Back</span>
+        <h2 class="section-title">Make a <span class="gradient-text">donation</span></h2>
+        <p class="section-sub">Fill in the details and we handle the rest</p>
+      </div>
+      <div class="donate-card">
+        <div class="donate-card-header">
+          <i class="fas fa-heart-pulse"></i>
+          <span>Your donation could feed a family tonight</span>
+        </div>
+        <form id="donateForm" enctype="multipart/form-data">
+          <div class="form-group">
+            <label><i class="fas fa-burger"></i> Food name</label>
+            <input type="text" name="foodName" placeholder="e.g., Biryani, Dal Rice..." required>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label><i class="fas fa-scale-balanced"></i> Quantity</label>
+              <input type="text" name="quantity" placeholder="e.g., 4 servings" required>
+            </div>
+            <div class="form-group">
+              <label><i class="fas fa-location-dot"></i> Location</label>
+              <input type="text" name="location" placeholder="e.g., Downtown" required>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label><i class="fas fa-clock"></i> Expiry date/time</label>
+              <input type="datetime-local" name="expiry" required>
+            </div>
+            <div class="form-group">
+              <label><i class="fas fa-image"></i> Food image</label>
+              <input type="file" name="image" accept="image/*" required id="foodImage" class="file-input">
+            </div>
+          </div>
+          <div id="analyzeResult" class="analyze-result"></div>
+          <button type="submit" class="btn btn-primary full-width glow-btn">
+            <i class="fas fa-paper-plane"></i> Post Donation
+          </button>
+        </form>
+        <div id="donateMessage" class="donate-message"></div>
+      </div>
     </div>
   </section>
 
-  <!-- Donate Section -->
-  <section class="container reveal" id="donate">
-    <h2 class="section-title">Make a donation</h2>
-    <div class="donate-card">
-      <form id="donateForm" enctype="multipart/form-data">
-        <div class="form-group">
-          <label>Food name</label>
-          <input type="text" name="foodName" required>
-        </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label>Quantity</label>
-            <input type="text" name="quantity" placeholder="e.g., 4 servings" required>
-          </div>
-          <div class="form-group">
-            <label>Location</label>
-            <input type="text" name="location" placeholder="e.g., Downtown" required>
-          </div>
-        </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label>Expiry date/time</label>
-            <input type="datetime-local" name="expiry" required>
-          </div>
-          <div class="form-group">
-            <label>Food image</label>
-            <input type="file" name="image" accept="image/*" required id="foodImage">
-          </div>
-        </div>
-        <div id="analyzeResult" class="analyze-result"></div>
-        <button type="submit" class="btn btn-primary full-width">Post Donation</button>
-      </form>
-      <div id="donateMessage" class="donate-message"></div>
-    </div>
-  </section>
-
-  <!-- Find Food (same as feed but separate anchor) -->
+  <!-- ═══ FIND FOOD ═══ -->
   <section class="container" id="find">
-    <h2 class="section-title">Find food near you</h2>
+    <div class="section-header">
+      <span class="section-badge">Near You</span>
+      <h2 class="section-title">Find food <span class="gradient-text">near you</span></h2>
+    </div>
     <div class="food-grid" id="findGrid"></div>
   </section>
 
-  <!-- User Dashboard -->
+  <!-- ═══ USER DASHBOARD ═══ -->
   <section class="container reveal" id="dashboard">
-    <h2 class="section-title">Your impact</h2>
+    <div class="section-header">
+      <span class="section-badge">Your Profile</span>
+      <h2 class="section-title">Your <span class="gradient-text">impact</span></h2>
+    </div>
     <div id="dashboardContent" class="dashboard-grid"></div>
   </section>
 
-  <!-- AI Assistant Jarvis – dedicated section -->
-  <section class="container jarvis-section reveal">
-    <h2 class="section-title">Meet Jarvis, your AI guide</h2>
-    <div class="jarvis-container">
-      <div class="jarvis-chat" id="jarvisChat">
-        <div class="chat-messages" id="jarvisMessages">
-          <div class="msg bot-msg">Hi! I'm Jarvis. How can I help you today? 😊</div>
-        </div>
-        <div class="chat-input-area">
-          <input type="text" id="jarvisInput" placeholder="Ask me anything...">
-          <button id="jarvisSend"><i class="fas fa-paper-plane"></i></button>
-        </div>
+  <!-- ═══ JARVIS AI ═══ -->
+  <section class="jarvis-section reveal">
+    <div class="container">
+      <div class="section-header light">
+        <span class="section-badge light">AI Powered</span>
+        <h2 class="section-title">Meet <span class="gradient-text-warm">Jarvis</span>, your AI guide</h2>
+        <p class="section-sub" style="color:rgba(255,255,255,0.7)">Ask about food safety, donation ideas, NGO
+          suggestions & more</p>
       </div>
-      <div class="jarvis-info">
-        <p>Jarvis can help with food safety, donation ideas, NGO suggestions, and more.</p>
+      <div class="jarvis-container">
+        <div class="jarvis-chat" id="jarvisChat">
+          <div class="jarvis-chat-header">
+            <div class="jarvis-avatar"><i class="fas fa-robot"></i></div>
+            <div>
+              <strong>Jarvis</strong>
+              <span class="online-dot">● Online</span>
+            </div>
+          </div>
+          <div class="chat-messages" id="jarvisMessages">
+            <div class="msg bot-msg">Hi! I'm Jarvis 🤖 How can I help you today?</div>
+          </div>
+          <div class="chat-input-area">
+            <input type="text" id="jarvisInput" placeholder="Ask me anything...">
+            <button id="jarvisSend"><i class="fas fa-paper-plane"></i></button>
+          </div>
+        </div>
+        <div class="jarvis-features">
+          <div class="jarvis-feat"><i class="fas fa-shield-halved"></i>
+            <div><strong>Food Safety</strong>
+              <p>Check if your food is safe to donate</p>
+            </div>
+          </div>
+          <div class="jarvis-feat"><i class="fas fa-lightbulb"></i>
+            <div><strong>Donation Ideas</strong>
+              <p>Get suggestions on what to donate</p>
+            </div>
+          </div>
+          <div class="jarvis-feat"><i class="fas fa-map-location-dot"></i>
+            <div><strong>NGO Finder</strong>
+              <p>Discover nearby NGOs accepting food</p>
+            </div>
+          </div>
+          <div class="jarvis-feat"><i class="fas fa-leaf"></i>
+            <div><strong>Waste Tips</strong>
+              <p>Learn how to reduce food waste daily</p>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </section>
 
-  <!-- Emotional Story Section (using local image) -->
+  <!-- ═══ STORY ═══ -->
   <section class="container reveal story-section">
     <div class="story-grid">
       <div class="story-text">
-        <h2>One small act can change a life.</h2>
-        <p>Last night, a single donation fed a homeless family. Your leftovers can be someone's hope.</p>
+        <span class="section-badge">Real Stories</span>
+        <h2>One small act <br>can <span class="gradient-text">change a life.</span></h2>
+        <p>Last night, a single donation fed a homeless family of four. Your leftovers can be someone's hope, someone's
+          strength, someone's tomorrow.</p>
+        <button class="btn btn-primary glow-btn" id="heroDonate2"><i class="fas fa-heart"></i> Start Donating</button>
       </div>
       <div class="story-image">
-        <img src="/images/food1.jpg" alt="Happy kids eating">
+        <div class="story-img-wrap">
+          <img src="/images/food1.jpg" alt="Happy family receiving food"
+            onerror="this.src='https://images.unsplash.com/photo-1593113598332-cd288d649433?w=600&q=80'">
+          <div class="story-img-badge"><i class="fas fa-star"></i> 2,840 meals today</div>
+        </div>
       </div>
     </div>
   </section>
 
-  <!-- Reviews Section (using local images) -->
-  <section class="container reveal">
-    <h2 class="section-title">Kind words</h2>
-    <div class="reviews-slider">
-      <div class="review-card">
-        <img src="/images/placeholder.jpg" alt="User">
-        <h4>Sarah M.</h4>
-        <p>"This platform helped me donate food easily. Loved it!"</p>
+  <!-- ═══ REVIEWS ═══ -->
+  <section class="reviews-section reveal">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-badge">Community</span>
+        <h2 class="section-title">Kind <span class="gradient-text">words</span></h2>
+        <p class="section-sub">Hear from our incredible community</p>
       </div>
-      <div class="review-card">
-        <img src="/images/placeholder.jpg" alt="User">
-        <h4>David K.</h4>
-        <p>"I found fresh meals near me and picked them up. Great initiative."</p>
-      </div>
-      <div class="review-card">
-        <img src="/images/placeholder.jpg" alt="User">
-        <h4>Priya R.</h4>
-        <p>"Every donation feels like a warm hug. Thank you KindPlate!"</p>
+      <div class="reviews-slider">
+        <div class="review-card">
+          <div class="review-stars">★★★★★</div>
+          <p>"This platform helped me donate food so easily. Changed my Sundays forever. Loved it!"</p>
+          <div class="review-author">
+            <div class="review-avatar" style="background:linear-gradient(135deg,#f97316,#ea580c)">SM</div>
+            <div><strong>Sarah M.</strong><span>Food Donor</span></div>
+          </div>
+        </div>
+        <div class="review-card">
+          <div class="review-stars">★★★★★</div>
+          <p>"I found fresh meals near me within minutes. Such a great initiative for our community!"</p>
+          <div class="review-author">
+            <div class="review-avatar" style="background:linear-gradient(135deg,#8b5cf6,#6d28d9)">DK</div>
+            <div><strong>David K.</strong><span>NGO Volunteer</span></div>
+          </div>
+        </div>
+        <div class="review-card">
+          <div class="review-stars">★★★★★</div>
+          <p>"Every donation feels like a warm hug. KindPlate connects hearts. Thank you!"</p>
+          <div class="review-author">
+            <div class="review-avatar" style="background:linear-gradient(135deg,#06b6d4,#0284c7)">PR</div>
+            <div><strong>Priya R.</strong><span>Regular Donor</span></div>
+          </div>
+        </div>
+        <div class="review-card">
+          <div class="review-stars">★★★★★</div>
+          <p>"As an NGO, KindPlate has been a game changer. We receive timely alerts and fresh food daily."</p>
+          <div class="review-author">
+            <div class="review-avatar" style="background:linear-gradient(135deg,#10b981,#059669)">RN</div>
+            <div><strong>Rahul N.</strong><span>NGO Director</span></div>
+          </div>
+        </div>
       </div>
     </div>
   </section>
 
-  <!-- Impact Counters -->
-  <section class="container reveal">
-    <div class="impact-grid">
-      <div class="counter-item"><h3 id="mealsCounter">0</h3><p>Meals donated</p></div>
-      <div class="counter-item"><h3 id="peopleCounter">0</h3><p>People helped</p></div>
-      <div class="counter-item"><h3 id="wasteCounter">0</h3><p>kg waste reduced</p></div>
-    </div>
-  </section>
-
-  <!-- Contact Section -->
+  <!-- ═══ CONTACT ═══ -->
   <section class="container reveal" id="contact">
-    <h2 class="section-title">Get in touch</h2>
-    <div class="contact-card">
-      <form id="contactForm">
-        <div class="form-row">
-          <div class="form-group">
-            <label>Name</label>
-            <input type="text" name="name" required>
+    <div class="section-header">
+      <span class="section-badge">Reach Us</span>
+      <h2 class="section-title">Get in <span class="gradient-text">touch</span></h2>
+      <p class="section-sub">We'd love to hear from you</p>
+    </div>
+    <div class="contact-wrapper">
+      <div class="contact-info">
+        <h3>Let's connect</h3>
+        <p>Whether you're a donor, volunteer, or NGO partner — we're here to help.</p>
+        <div class="contact-details">
+          <div class="cdetail"><i class="fas fa-envelope"></i><span>hello@kindplate.org</span></div>
+          <div class="cdetail"><i class="fas fa-phone"></i><span>+91 98765 43210</span></div>
+          <div class="cdetail"><i class="fas fa-location-dot"></i><span>Mumbai, India</span></div>
+        </div>
+        <div class="social-links">
+          <a href="#" class="social-btn"><i class="fab fa-instagram"></i></a>
+          <a href="#" class="social-btn"><i class="fab fa-twitter"></i></a>
+          <a href="#" class="social-btn"><i class="fab fa-linkedin"></i></a>
+        </div>
+      </div>
+      <div class="contact-card">
+        <form id="contactForm">
+          <div class="form-row">
+            <div class="form-group">
+              <label><i class="fas fa-user"></i> Name</label>
+              <input type="text" name="name" placeholder="Your name" required>
+            </div>
+            <div class="form-group">
+              <label><i class="fas fa-envelope"></i> Email</label>
+              <input type="email" name="email" placeholder="your@email.com" required>
+            </div>
           </div>
           <div class="form-group">
-            <label>Email</label>
-            <input type="email" name="email" required>
+            <label><i class="fas fa-message"></i> Message</label>
+            <textarea name="message" rows="4" placeholder="How can we help you?" required></textarea>
           </div>
-        </div>
-        <div class="form-group">
-          <label>Message</label>
-          <textarea name="message" rows="4" required></textarea>
-        </div>
-        <button type="submit" class="btn btn-primary">Send Message</button>
-      </form>
+          <button type="submit" class="btn btn-primary full-width glow-btn">
+            <i class="fas fa-paper-plane"></i> Send Message
+          </button>
+        </form>
+      </div>
     </div>
   </section>
 
-  <!-- Footer -->
-  <footer>
-    <p>© KindPlate — share a meal, change a life.</p>
+  <!-- ═══ FOOTER ═══ -->
+  <footer class="site-footer">
+    <div class="footer-wave">
+      <svg viewBox="0 0 1440 120" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
+        <path d="M0,64 C360,120 1080,0 1440,64 L1440,0 L0,0 Z" fill="var(--bg)" />
+      </svg>
+    </div>
+    <div class="container footer-inner">
+      <div class="footer-brand">
+        <div class="logo"><span class="logo-icon">🍽️</span><span class="logo-text">Kind<span
+              class="logo-accent">Plate</span></span></div>
+        <p>Connecting hearts through food. Every meal shared is a life touched.</p>
+        <div class="social-links">
+          <a href="#" class="social-btn"><i class="fab fa-instagram"></i></a>
+          <a href="#" class="social-btn"><i class="fab fa-twitter"></i></a>
+          <a href="#" class="social-btn"><i class="fab fa-linkedin"></i></a>
+          <a href="#" class="social-btn"><i class="fab fa-youtube"></i></a>
+        </div>
+      </div>
+      <div class="footer-links">
+        <h4>Quick Links</h4>
+        <a href="#home">Home</a>
+        <a href="#how">How It Works</a>
+        <a href="#donate">Donate Food</a>
+        <a href="#feed">Find Food</a>
+        <a href="#contact">Contact</a>
+      </div>
+      <div class="footer-links">
+        <h4>Support</h4>
+        <a href="#">FAQ</a>
+        <a href="#">Volunteer</a>
+        <a href="#">NGO Partners</a>
+        <a href="#">Privacy Policy</a>
+        <a href="#">Terms of Use</a>
+      </div>
+      <div class="footer-newsletter">
+        <h4>Stay Updated</h4>
+        <p>Get weekly impact reports in your inbox.</p>
+        <div class="newsletter-input">
+          <input type="email" placeholder="your@email.com">
+          <button class="btn btn-primary">Subscribe</button>
+        </div>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>© 2025 KindPlate — Made with <span style="color:#ef4444">❤️</span> to fight hunger. Share a meal, change a
+        life.</p>
+    </div>
   </footer>
 
-  <!-- Floating Chat Button (Jarvis) -->
-  <button class="chat-btn" id="chatBtn"><i class="fas fa-robot"></i></button>
+  <!-- ═══ FLOATING CHAT ═══ -->
+  <button class="chat-btn" id="chatBtn" aria-label="Open Jarvis chat">
+    <i class="fas fa-robot"></i>
+    <span class="chat-pulse"></span>
+  </button>
   <div class="chat-window" id="chatWindow">
-    <div class="chat-header">Jarvis <span>🤖</span></div>
+    <div class="chat-header">
+      <div class="chat-header-left">
+        <div class="chat-avatar"><i class="fas fa-robot"></i></div>
+        <div><strong>Jarvis</strong><span class="online-dot small">● Online</span></div>
+      </div>
+      <button class="chat-close-btn" id="chatCloseBtn"><i class="fas fa-times"></i></button>
+    </div>
     <div class="chat-msgs" id="chatMsgs">
-      <div class="msg bot-msg">Hi! I'm Jarvis. How can I help you today? 😊</div>
+      <div class="msg bot-msg">Hi! I'm Jarvis 🤖 How can I help you today?</div>
     </div>
     <div class="chat-input">
       <input type="text" id="chatInput" placeholder="Ask me anything...">
@@ -230,33 +484,35 @@
     </div>
   </div>
 
-  <!-- Auth Modal -->
+  <!-- ═══ AUTH MODAL ═══ -->
   <div id="authModal" class="modal">
     <div class="modal-content glass">
       <span class="close">&times;</span>
-      <h2 id="modalTitle">Login</h2>
+      <div class="modal-icon"><i class="fas fa-user-circle"></i></div>
+      <h2 id="modalTitle">Welcome Back</h2>
+      <p class="modal-subtitle">Sign in to continue your kindness journey</p>
       <form id="authForm">
-        <div id="nameField" class="form-group" style="display: none;">
-          <label>Name</label>
-          <input type="text" name="name">
+        <div id="nameField" class="form-group" style="display:none;">
+          <label><i class="fas fa-user"></i> Name</label>
+          <input type="text" name="name" placeholder="Your full name">
         </div>
         <div class="form-group">
-          <label>Email</label>
-          <input type="email" name="email" required>
+          <label><i class="fas fa-envelope"></i> Email</label>
+          <input type="email" name="email" placeholder="your@email.com" required>
         </div>
         <div class="form-group">
-          <label>Password</label>
-          <input type="password" name="password" required>
+          <label><i class="fas fa-lock"></i> Password</label>
+          <input type="password" name="password" placeholder="••••••••" required>
         </div>
-        <button type="submit" class="btn btn-primary full-width" id="authSubmit">Login</button>
+        <button type="submit" class="btn btn-primary full-width glow-btn" id="authSubmit">Login</button>
       </form>
       <p id="toggleAuth">Don't have an account? <a href="#" id="switchToSignup">Sign up</a></p>
       <div id="authMessage"></div>
     </div>
   </div>
 
-  <!-- Confetti library -->
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1"></script>
   <script src="script.js"></script>
 </body>
+
 </html>
