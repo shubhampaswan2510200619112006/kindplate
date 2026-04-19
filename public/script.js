@@ -4,6 +4,50 @@ let currentUser = null;
 let token = localStorage.getItem('token');
 let allDonations = [];
 
+// ========== UTILITIES ==========
+function sanitizeHTML(str) {
+  if (!str) return '';
+  const temp = document.createElement('div');
+  temp.textContent = str;
+  return temp.innerHTML;
+}
+
+function showToast(message, type = 'success') {
+  let toastContainer = document.getElementById('toastContainer');
+  if (!toastContainer) {
+    toastContainer = document.createElement('div');
+    toastContainer.id = 'toastContainer';
+    document.body.appendChild(toastContainer);
+  }
+  const toast = document.createElement('div');
+  toast.className = `toast toast-${type}`;
+  toast.innerHTML = `<i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'}"></i> <span>${sanitizeHTML(message)}</span>`;
+  toastContainer.appendChild(toast);
+  
+  setTimeout(() => toast.classList.add('show'), 10);
+  setTimeout(() => {
+    toast.classList.remove('show');
+    setTimeout(() => toast.remove(), 300);
+  }, 3000);
+}
+
+// ========== JARVIS REAL AI CORE ==========
+async function getSharedBotReply(input) {
+  try {
+    const res = await fetch('http://localhost:5000/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: input })
+    });
+    if (!res.ok) return "Sorry, my neural network is currently offline. Please try again later.";
+    const data = await res.json();
+    return data.reply;
+  } catch(e) {
+    console.error("Jarvis API error:", e);
+    return "Error communicating with my core logic servers.";
+  }
+}
+
 // DOM elements
 const body = document.body;
 const navbar = document.getElementById('navbar');
@@ -252,11 +296,11 @@ function renderDonations(filter = 'all', search = '') {
     const expiryDate = new Date(d.expiry).toLocaleString();
     html += `
       <div class="card reveal">
-        <img src="${d.image || '/images/placeholder.jpg'}" alt="${d.foodName}" class="card-img" loading="lazy">
+        <img src="${sanitizeHTML(d.image) || '/images/placeholder.jpg'}" alt="${sanitizeHTML(d.foodName)}" class="card-img" loading="lazy">
         <div class="card-content">
-          <span class="card-tag">${d.tag}</span>
-          <h3>${d.foodName}</h3>
-          <div class="card-meta"><span><i class="fas fa-utensils"></i> ${d.quantity}</span> <span><i class="fas fa-location-dot"></i> ${d.location}</span></div>
+          <span class="card-tag">${sanitizeHTML(d.tag)}</span>
+          <h3>${sanitizeHTML(d.foodName)}</h3>
+          <div class="card-meta"><span><i class="fas fa-utensils"></i> ${sanitizeHTML(d.quantity)}</span> <span><i class="fas fa-location-dot"></i> ${sanitizeHTML(d.location)}</span></div>
           <p style="font-size:0.85rem; color:#6B7280;">Expires: ${expiryDate}</p>
           <button class="request-btn" data-id="${d._id}">Request Pickup</button>
         </div>
@@ -275,11 +319,11 @@ function renderFindDonations() {
     const expiryDate = new Date(d.expiry).toLocaleString();
     html += `
       <div class="card reveal">
-        <img src="${d.image || '/images/placeholder.jpg'}" alt="${d.foodName}" class="card-img" loading="lazy">
+        <img src="${sanitizeHTML(d.image) || '/images/placeholder.jpg'}" alt="${sanitizeHTML(d.foodName)}" class="card-img" loading="lazy">
         <div class="card-content">
-          <span class="card-tag">${d.tag}</span>
-          <h3>${d.foodName}</h3>
-          <div class="card-meta"><span><i class="fas fa-utensils"></i> ${d.quantity}</span> <span><i class="fas fa-location-dot"></i> ${d.location}</span></div>
+          <span class="card-tag">${sanitizeHTML(d.tag)}</span>
+          <h3>${sanitizeHTML(d.foodName)}</h3>
+          <div class="card-meta"><span><i class="fas fa-utensils"></i> ${sanitizeHTML(d.quantity)}</span> <span><i class="fas fa-location-dot"></i> ${sanitizeHTML(d.location)}</span></div>
           <button class="request-btn" data-id="${d._id}">Request Pickup</button>
         </div>
       </div>
@@ -293,7 +337,7 @@ function renderFindDonations() {
 function attachRequestButtons() {
   document.querySelectorAll('.request-btn').forEach(btn => {
     btn.addEventListener('click', async (e) => {
-      if (!currentUser) { alert('Please login to request pickup'); return; }
+      if (!currentUser) { showToast('Please login to request pickup', 'error'); return; }
       const id = btn.dataset.id;
       try {
         const res = await fetch(`/api/request-pickup/${id}`, {
@@ -301,9 +345,9 @@ function attachRequestButtons() {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         if (!res.ok) throw new Error();
-        alert('Pickup requested! The donor will be notified.');
+        showToast('Pickup requested! The donor will be notified.', 'success');
       } catch (err) {
-        alert('Failed to request pickup');
+        showToast('Failed to request pickup', 'error');
       }
     });
   });
@@ -350,7 +394,7 @@ function setupDonateForm() {
 
   donateForm.addEventListener('submit', async (e) => {
     e.preventDefault();
-    if (!currentUser) { alert('Please login to donate'); return; }
+    if (!currentUser) { showToast('Please login to donate', 'error'); return; }
 
     const formData = new FormData(donateForm);
     try {
@@ -389,7 +433,7 @@ async function fetchUserDonations() {
       donations.forEach(d => {
         html += `
           <div class="dashboard-card">
-            <p><strong>${d.foodName}</strong> (${d.quantity})</p>
+            <p><strong>${sanitizeHTML(d.foodName)}</strong> (${sanitizeHTML(d.quantity)})</p>
             <p>Status: <span class="${d.status === 'Picked' ? 'picked' : 'pending'}">${d.status}</span></p>
             <p>Expires: ${new Date(d.expiry).toLocaleDateString()}</p>
           </div>
@@ -426,76 +470,6 @@ function setupChatbot() {
   const chatCloseBtn = document.getElementById('chatCloseBtn');
   if (chatCloseBtn) chatCloseBtn.addEventListener('click', () => chatWindow.classList.remove('open'));
 
-  const botKnowledge = {
-    greetings: ['hi', 'hello', 'hey', 'greetings'],
-    donate: ['donate', 'donation', 'give food', 'contribute'],
-    safety: ['safe', 'safety', 'expired', 'storage', 'temperature'],
-    ideas: ['what should i donate', 'suggestions', 'ideas', 'what food'],
-    ngo: ['ngo', 'organization', 'volunteer', 'near me'],
-    thanks: ['thank', 'thanks', 'appreciate']
-  };
-
-  const replies = {
-    greeting: [
-      "Hey there 😊 How can I help you today?",
-      "Hello! Ready to make a difference?",
-      "Hi! I'm Jarvis. What can I do for you?"
-    ],
-    donate: [
-      "That's wonderful! You can donate by clicking the 'Donate Food' button above. Make sure your food is fresh and properly packed.",
-      "Awesome! Use the donation form to list your meal. Quick tip: add a clear photo!",
-      "Great! Remember to include the quantity and expiry time so volunteers know."
-    ],
-    safety: [
-      "Food safety tip: Keep perishables below 5°C, and always check expiry dates. When in doubt, don't donate.",
-      "For cooked food, ensure it's been stored properly and is less than 2 hours old if unrefrigerated.",
-      "Pack food in clean, sealed containers to maintain hygiene."
-    ],
-    ideas: [
-      "Great question! Non-perishables like rice, canned goods, or freshly cooked meals (if you can deliver quickly) are always welcome.",
-      "You can donate fruits, vegetables, bread, or even packaged snacks. Just make sure they're not expired.",
-      "Cooked meals like dal, rice, or vegetable dishes are great if they're freshly prepared."
-    ],
-    ngo: [
-      "There's an NGO nearby called 'HopeShare' that collects daily. You can also find local volunteers in the feed.",
-      "Check the 'Find Food' section – many NGOs post their needs there.",
-      "You can also contact local temples, gurdwaras, or community kitchens – they often accept food donations."
-    ],
-    thanks: [
-      "You're welcome! 😊 Every meal counts.",
-      "Happy to help! Thank you for being kind.",
-      "Anytime! Let's spread kindness together."
-    ],
-    default: [
-      "That's interesting! Could you tell me more?",
-      "I'm here to help with food donation. Could you rephrase that?",
-      "Hmm, I didn't quite get that. Try asking about donation, safety, or NGOs."
-    ]
-  };
-
-  function getBotReply(input) {
-    input = input.toLowerCase();
-    if (botKnowledge.greetings.some(word => input.includes(word))) {
-      return replies.greeting[Math.floor(Math.random() * replies.greeting.length)];
-    }
-    if (botKnowledge.donate.some(word => input.includes(word))) {
-      return replies.donate[Math.floor(Math.random() * replies.donate.length)];
-    }
-    if (botKnowledge.safety.some(word => input.includes(word))) {
-      return replies.safety[Math.floor(Math.random() * replies.safety.length)];
-    }
-    if (botKnowledge.ideas.some(word => input.includes(word))) {
-      return replies.ideas[Math.floor(Math.random() * replies.ideas.length)];
-    }
-    if (botKnowledge.ngo.some(word => input.includes(word))) {
-      return replies.ngo[Math.floor(Math.random() * replies.ngo.length)];
-    }
-    if (botKnowledge.thanks.some(word => input.includes(word))) {
-      return replies.thanks[Math.floor(Math.random() * replies.thanks.length)];
-    }
-    return replies.default[Math.floor(Math.random() * replies.default.length)];
-  }
-
   function addMessage(text, sender) {
     const msgDiv = document.createElement('div');
     msgDiv.classList.add('msg', sender === 'user' ? 'user-msg' : 'bot-msg');
@@ -511,11 +485,11 @@ function setupChatbot() {
     chatMsgs.appendChild(typingDiv);
     chatMsgs.scrollTop = chatMsgs.scrollHeight;
 
-    setTimeout(() => {
+    setTimeout(async () => {
       chatMsgs.removeChild(typingDiv);
-      const reply = getBotReply(userMsg);
+      const reply = await getSharedBotReply(userMsg);
       addMessage(reply, 'bot');
-    }, 1500);
+    }, 500);
   }
 
   function sendMessage() {
@@ -534,76 +508,6 @@ function setupChatbot() {
 function setupJarvisSection() {
   if (!jarvisSend || !jarvisInput) return;
 
-  const botKnowledge = {
-    greetings: ['hi', 'hello', 'hey', 'greetings'],
-    donate: ['donate', 'donation', 'give food', 'contribute'],
-    safety: ['safe', 'safety', 'expired', 'storage', 'temperature'],
-    ideas: ['what should i donate', 'suggestions', 'ideas', 'what food'],
-    ngo: ['ngo', 'organization', 'volunteer', 'near me'],
-    thanks: ['thank', 'thanks', 'appreciate']
-  };
-
-  const replies = {
-    greeting: [
-      "Hey there 😊 How can I help you today?",
-      "Hello! Ready to make a difference?",
-      "Hi! I'm Jarvis. What can I do for you?"
-    ],
-    donate: [
-      "That's wonderful! You can donate by clicking the 'Donate Food' button above. Make sure your food is fresh and properly packed.",
-      "Awesome! Use the donation form to list your meal. Quick tip: add a clear photo!",
-      "Great! Remember to include the quantity and expiry time so volunteers know."
-    ],
-    safety: [
-      "Food safety tip: Keep perishables below 5°C, and always check expiry dates. When in doubt, don't donate.",
-      "For cooked food, ensure it's been stored properly and is less than 2 hours old if unrefrigerated.",
-      "Pack food in clean, sealed containers to maintain hygiene."
-    ],
-    ideas: [
-      "Great question! Non-perishables like rice, canned goods, or freshly cooked meals (if you can deliver quickly) are always welcome.",
-      "You can donate fruits, vegetables, bread, or even packaged snacks. Just make sure they're not expired.",
-      "Cooked meals like dal, rice, or vegetable dishes are great if they're freshly prepared."
-    ],
-    ngo: [
-      "There's an NGO nearby called 'HopeShare' that collects daily. You can also find local volunteers in the feed.",
-      "Check the 'Find Food' section – many NGOs post their needs there.",
-      "You can also contact local temples, gurdwaras, or community kitchens – they often accept food donations."
-    ],
-    thanks: [
-      "You're welcome! 😊 Every meal counts.",
-      "Happy to help! Thank you for being kind.",
-      "Anytime! Let's spread kindness together."
-    ],
-    default: [
-      "That's interesting! Could you tell me more?",
-      "I'm here to help with food donation. Could you rephrase that?",
-      "Hmm, I didn't quite get that. Try asking about donation, safety, or NGOs."
-    ]
-  };
-
-  function getBotReply(input) {
-    input = input.toLowerCase();
-    if (botKnowledge.greetings.some(word => input.includes(word))) {
-      return replies.greeting[Math.floor(Math.random() * replies.greeting.length)];
-    }
-    if (botKnowledge.donate.some(word => input.includes(word))) {
-      return replies.donate[Math.floor(Math.random() * replies.donate.length)];
-    }
-    if (botKnowledge.safety.some(word => input.includes(word))) {
-      return replies.safety[Math.floor(Math.random() * replies.safety.length)];
-    }
-    if (botKnowledge.ideas.some(word => input.includes(word))) {
-      return replies.ideas[Math.floor(Math.random() * replies.ideas.length)];
-    }
-    if (botKnowledge.ngo.some(word => input.includes(word))) {
-      return replies.ngo[Math.floor(Math.random() * replies.ngo.length)];
-    }
-    if (botKnowledge.thanks.some(word => input.includes(word))) {
-      return replies.thanks[Math.floor(Math.random() * replies.thanks.length)];
-    }
-    return replies.default[Math.floor(Math.random() * replies.default.length)];
-  }
-
   function addJarvisMessage(text, sender) {
     const msgDiv = document.createElement('div');
     msgDiv.classList.add('msg', sender === 'user' ? 'user-msg' : 'bot-msg');
@@ -619,11 +523,11 @@ function setupJarvisSection() {
     jarvisMessages.appendChild(typingDiv);
     jarvisMessages.scrollTop = jarvisMessages.scrollHeight;
 
-    setTimeout(() => {
+    setTimeout(async () => {
       jarvisMessages.removeChild(typingDiv);
-      const reply = getBotReply(userMsg);
+      const reply = await getSharedBotReply(userMsg);
       addJarvisMessage(reply, 'bot');
-    }, 1500);
+    }, 500);
   }
 
   jarvisSend.addEventListener('click', () => {
@@ -653,7 +557,7 @@ function setupContactForm() {
   if (contactForm) {
     contactForm.addEventListener('submit', (e) => {
       e.preventDefault();
-      alert('Thank you for reaching out! We will get back to you soon.');
+      showToast('Thank you for reaching out! We will get back to you soon.', 'success');
       contactForm.reset();
     });
   }

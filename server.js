@@ -1,20 +1,40 @@
 require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
-const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const multer = require('multer');
 const path = require('path');
 const cors = require('cors');
 const fs = require('fs');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
+const { GoogleGenAI } = require('@google/genai');
+
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || 'MISSING_KEY' });
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Middleware
-app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(helmet({ contentSecurityPolicy: false })); // Disabled CSP temporarily so external fonts/scripts don't break
+app.use(cors()); // Allow all for local dev/testing
+app.use(express.json({ limit: '10kb' })); // Added payload limit
+app.use(express.urlencoded({ extended: true, limit: '10kb' }));
+
+// Rate Limiters
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 mins
+  max: 10, // max 10 requests per windowMs
+  message: { error: 'Too many login attempts, please try again later' }
+});
+
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 150, 
+  message: { error: 'Too many requests, please try again later' }
+});
+app.use('/api/', apiLimiter);
+
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use(express.static('public'));
 
@@ -53,7 +73,14 @@ const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, 'uploads/'),
   filename: (req, file, cb) => cb(null, Date.now() + '-' + file.originalname)
 });
-const upload = multer({ storage });
+const fileFilter = (req, file, cb) => {
+  if (file.mimetype.startsWith('image/')) {
+    cb(null, true);
+  } else {
+    cb(new Error('Only image files are allowed!'), false);
+  }
+};
+const upload = multer({ storage, fileFilter, limits: { fileSize: 5 * 1024 * 1024 } }); // 5MB limit
 
 // ========== AUTH MIDDLEWARE ==========
 const auth = async (req, res, next) => {
@@ -93,7 +120,7 @@ app.post('/api/signup', async (req, res) => {
 });
 
 // Login
-app.post('/api/login', async (req, res) => {
+app.post('/api/login', authLimiter, async (req, res) => {
   try {
     const { email, password } = req.body;
     const user = await User.findOne({ email });
@@ -169,7 +196,7 @@ app.get('/api/my-donations', auth, async (req, res) => {
 });
 
 // Request pickup (update status)
-app.post('/api/request-pickup/:id', auth, async (req, res) => {
+app.post('/api/request-pickup/:id', authLimiter, auth, async (req, res) => {
   try {
     const donation = await Donation.findById(req.params.id);
     if (!donation) return res.status(404).json({ error: 'Not found' });
@@ -178,6 +205,26 @@ app.post('/api/request-pickup/:id', auth, async (req, res) => {
     res.json({ message: 'Pickup requested' });
   } catch (err) {
     res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// AI Chatbot Route
+app.post('/api/chat', apiLimiter, async (req, res) => {
+  try {
+    const { message } = req.body;
+    if (!process.env.GEMINI_API_KEY) {
+      return res.json({ reply: "I'm currently running in offline mode. Please add your GEMINI_API_KEY to the .env file to activate my AI brain." });
+    }
+    const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: [
+            { role: 'user', parts: [{ text: `You are Jarvis, a helpful AI assistant for KindPlate (a food donation platform). The user says: "${message}". Keep your reply extremely concise, friendly, and helpful. 1-2 short sentences maximum.` }] }
+        ],
+    });
+    res.json({ reply: response.text });
+  } catch (err) {
+    console.error('AI Error:', err);
+    res.status(500).json({ reply: "I'm having trouble connecting to my neural network right now. Try again later!" });
   }
 });
 

@@ -1857,14 +1857,17 @@ body.dark .form-group select {
   bottom: 28px;
   right: 28px;
   background: var(--black);
-  width: 58px;
-  height: 58px;
-  border-radius: 0;
+  color: var(--green);
+  width: auto;
+  height: auto;
+  padding: 14px 24px;
+  border-radius: 40px;
   display: flex;
   align-items: center;
-  justify-content: center;
-  color: var(--green);
-  font-size: 1.3rem;
+  gap: 10px;
+  font-family: var(--font-body);
+  font-weight: 500;
+  font-size: 1.05rem;
   border: none;
   cursor: pointer;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
@@ -1880,10 +1883,10 @@ body.dark .form-group select {
 
 .chat-pulse {
   position: absolute;
-  top: -3px;
-  right: -3px;
-  width: 12px;
-  height: 12px;
+  top: -2px;
+  right: 12px;
+  width: 10px;
+  height: 10px;
   background: var(--green);
   border-radius: 0;
   animation: pulse 2s infinite;
@@ -1953,7 +1956,7 @@ body.dark .form-group select {
   font-family: var(--font-display);
   font-size: 1rem;
   font-weight: 400;
-  color: var(--ivory);
+  color: #ffffff;
   letter-spacing: 0.03em;
 }
 
@@ -2385,6 +2388,77 @@ body.dark .form-group select {
   }
 }
 
+/* ── Toasts ─────────────────────────────────────────────── */
+#toastContainer {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.toast {
+  background: var(--surface);
+  color: var(--text);
+  border-left: 4px solid var(--green);
+  padding: 16px 20px;
+  box-shadow: var(--shadow-lg);
+  border-radius: var(--radius-lg);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  transform: translateX(120%);
+  opacity: 0;
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.toast.show {
+  transform: translateX(0);
+  opacity: 1;
+}
+
+.toast-error {
+  border-left-color: #ef4444;
+}
+
+.toast i {
+  font-size: 1.2rem;
+}
+
+.toast-success i {
+  color: var(--green);
+}
+
+.toast-error i {
+  color: #ef4444;
+}
+
+body.dark .toast {
+  background: var(--surface2);
+  border: 1px solid var(--border-soft);
+  border-left: 4px solid var(--green);
+}
+
+body.dark .toast-error {
+  border-left-color: #ef4444;
+}
+
+/* ── Chat Dark Mode Fix ── */
+body.dark .chat-msgs .bot-msg,
+body.dark .chat-messages .bot-msg {
+  background: var(--surface2) !important;
+  color: var(--text) !important;
+  border: 1px solid var(--border-soft);
+}
+
+body.dark .chat-msgs .user-msg,
+body.dark .chat-messages .user-msg {
+  background: var(--green) !important;
+  color: var(--black) !important;
+}
+
 /* ════════════════════════════════════════════════════════════
    RESPONSIVE — MOBILE (≤ 640px)
    ════════════════════════════════════════════════════════════ */
@@ -2511,8 +2585,8 @@ body.dark .form-group select {
   .chat-btn {
     bottom: 20px;
     right: 16px;
-    width: 54px;
-    height: 54px;
+    padding: 12px 20px;
+    font-size: 0.95rem;
   }
 
   /* Jarvis */
