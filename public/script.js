@@ -117,14 +117,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }, { threshold: 0.1 });
   document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
 
-  // Impact counters observer
-  const impactObserver = new IntersectionObserver((entries) => {
-    entries.forEach(entry => {
-      if (entry.isIntersecting) animateCounters();
-    });
-  }, { threshold: 0.3 });
-  const impactSection = document.querySelector('.impact-grid');
-  if (impactSection) impactObserver.observe(impactSection);
+
 
   // Start slideshow
   if (slides.length) showSlides();
@@ -444,25 +437,6 @@ async function fetchUserDonations() {
   } catch (err) { console.error(err); }
 }
 
-// ========== COUNTERS ==========
-function animateCounters() {
-  const counters = [
-    { el: document.getElementById('mealsCounter'), target: 2840, suffix: '' },
-    { el: document.getElementById('peopleCounter'), target: 1870, suffix: '' },
-    { el: document.getElementById('wasteCounter'), target: 1250, suffix: '' },
-    { el: document.getElementById('ngoCounter'), target: 52, suffix: '' }
-  ];
-  counters.forEach(c => {
-    if (!c.el) return;
-    let current = 0;
-    const step = Math.ceil(c.target / 60);
-    const update = setInterval(() => {
-      current += step;
-      if (current >= c.target) { current = c.target; clearInterval(update); }
-      c.el.innerText = current.toLocaleString() + c.suffix;
-    }, 25);
-  });
-}
 
 // ========== CHATBOT (FLOATING) with enhanced AI ==========
 function setupChatbot() {
