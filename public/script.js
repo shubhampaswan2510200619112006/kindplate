@@ -426,7 +426,7 @@ function renderFindDonations() {
           <strong><i class="fas fa-hand-holding-heart"></i> Accepted by ${d.pickedBy.name} (${d.pickedBy.role})</strong>
           <p><i class="fas fa-envelope"></i> ${d.pickedBy.email}</p>
           ${d.pickupLocation ? `
-            <a class="view-map-link" onclick="viewLocationOnMap(${d.pickupLocation.lat}, ${d.pickupLocation.lng}, '${d.pickupLocation.address}')">
+            <a class="view-map-link" onclick="viewLocationOnMap(${d.pickupLocation.lat}, ${d.pickupLocation.lng}, \`${sanitizeHTML(d.pickupLocation.address)}\`)">
               <i class="fas fa-location-dot"></i> View Pickup Point
             </a>
           ` : ''}
@@ -479,14 +479,43 @@ function setupMaps() {
   const closeMap = document.getElementById('closeMap');
   const mapModal = document.getElementById('mapModal');
   const confirmBtn = document.getElementById('confirmLocationBtn');
+  const searchInput = document.getElementById('mapSearchInput');
+  const searchBtn = document.getElementById('mapSearchBtn');
   
   if (closeMap) closeMap.onclick = () => mapModal.style.display = 'none';
   
+  if (searchBtn && searchInput) {
+    const handleSearch = async () => {
+      const query = searchInput.value.trim();
+      if (!query) return;
+      searchBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+      try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`);
+        const data = await res.json();
+        if (data.length > 0) {
+          const { lat, lon, display_name } = data[0];
+          const pos = [parseFloat(lat), parseFloat(lon)];
+          map.setView(pos, 15);
+          if (marker) map.removeLayer(marker);
+          marker = L.marker(pos).addTo(map);
+          document.getElementById('mapAddress').value = display_name;
+        } else {
+          showToast('Location not found. Try being more specific.', 'error');
+        }
+      } catch (err) {
+        showToast('Search service unavailable', 'error');
+      }
+      searchBtn.innerHTML = '<i class="fas fa-location-arrow"></i>';
+    };
+    searchBtn.onclick = handleSearch;
+    searchInput.onkeypress = (e) => { if (e.key === 'Enter') handleSearch(); };
+  }
+
   if (confirmBtn) {
     confirmBtn.onclick = () => {
       const address = document.getElementById('mapAddress').value;
       if (!marker) {
-        showToast('Please click on the map to select a location', 'error');
+        showToast('Please click on the map or search to select a location', 'error');
         return;
       }
       const pos = marker.getLatLng();
@@ -672,7 +701,7 @@ async function fetchUserDonations() {
               <strong><i class="fas fa-hand-holding-heart"></i> Taken by ${d.pickedBy.name} (${d.pickedBy.role})</strong>
               <p style="font-size: 0.8rem; opacity: 0.8;"><i class="fas fa-envelope"></i> ${d.pickedBy.email}</p>
               ${d.pickupLocation ? `
-                <a class="view-map-link" style="font-size: 0.8rem;" onclick="viewLocationOnMap(${d.pickupLocation.lat}, ${d.pickupLocation.lng}, '${d.pickupLocation.address}')">
+                <a class="view-map-link" style="font-size: 0.8rem;" onclick="viewLocationOnMap(${d.pickupLocation.lat}, ${d.pickupLocation.lng}, \`${sanitizeHTML(d.pickupLocation.address)}\`)">
                   <i class="fas fa-location-dot"></i> See their location on map
                 </a>
               ` : ''}
