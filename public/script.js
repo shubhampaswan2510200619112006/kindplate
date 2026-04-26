@@ -144,7 +144,8 @@ document.addEventListener('DOMContentLoaded', () => {
   setupHamburger();
   setupFooterPlaceholders();
   setupSupportModals();
-  setupMaps();
+  initGoogleMaps();
+  setupFeedback();
   setupFeedback();
 });
 
@@ -252,15 +253,37 @@ function setupAuth() {
 
   const roleField = document.getElementById('roleField');
 
-  function showSignup() {
+  function showSignup(defaultRole = 'Donor') {
     modalTitle.textContent = 'Create Account';
     nameField.style.display = 'block';
-    if (roleField) roleField.style.display = 'block';
+    if (roleField) {
+      roleField.style.display = 'block';
+      const roleSelect = roleField.querySelector('select');
+      if (roleSelect) roleSelect.value = defaultRole;
+    }
     authSubmit.textContent = 'Sign Up';
     toggleAuth.innerHTML = `Already have an account? <a href="#" id="switchToLogin">Login</a>`;
     document.getElementById('switchToLogin').addEventListener('click', (e) => {
       e.preventDefault();
       loginBtn.click();
+    });
+  }
+
+  // Handle CTA buttons for specific roles
+  const joinNgoBtn = document.getElementById('joinNgoBtn');
+  const joinVolunteerBtn = document.getElementById('joinVolunteerBtn');
+  
+  if (joinNgoBtn) {
+    joinNgoBtn.addEventListener('click', () => {
+      modal.style.display = 'flex';
+      showSignup('NGO');
+    });
+  }
+  
+  if (joinVolunteerBtn) {
+    joinVolunteerBtn.addEventListener('click', () => {
+      modal.style.display = 'flex';
+      showSignup('Volunteer');
     });
   }
 
@@ -471,64 +494,102 @@ function observeCards() {
   document.querySelectorAll('.card').forEach(card => cardObserver.observe(card));
 }
 
-// ========== MAP LOGIC (Leaflet) ==========
+// ========== MAP LOGIC (Google Maps) ==========
 let map;
 let marker;
 let currentDonationIdForMap;
+let autocomplete;
+
+async function initGoogleMaps() {
+  try {
+    const res = await fetch('/api/config');
+    const config = await res.json();
+    if (config.googleMapsApiKey) {
+      const script = document.createElement('script');
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${config.googleMapsApiKey}&libraries=places&callback=setupMaps`;
+      script.async = true;
+      script.defer = true;
+      window.setupMaps = setupMaps; // Make it global for the callback
+      document.getElementById('mapScriptContainer').appendChild(script);
+    } else {
+      console.warn('Google Maps API Key is missing.');
+    }
+  } catch (err) {
+    console.error('Failed to load map configuration');
+  }
+}
 
 function setupMaps() {
   const closeMap = document.getElementById('closeMap');
   const mapModal = document.getElementById('mapModal');
   const confirmBtn = document.getElementById('confirmLocationBtn');
   const searchInput = document.getElementById('mapSearchInput');
-  const searchBtn = document.getElementById('mapSearchBtn');
   
   if (closeMap) closeMap.onclick = () => mapModal.style.display = 'none';
-  
-  if (searchBtn && searchInput) {
-    const handleSearch = async () => {
-      const query = searchInput.value.trim();
-      if (!query) return;
-      searchBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-      try {
-        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`);
-        const data = await res.json();
-        if (data.length > 0) {
-          const { lat, lon, display_name } = data[0];
-          const pos = [parseFloat(lat), parseFloat(lon)];
-          map.setView(pos, 15);
-          if (marker) map.removeLayer(marker);
-          marker = L.marker(pos).addTo(map);
-          document.getElementById('mapAddress').value = display_name;
-        } else {
-          showToast('Location not found. Try being more specific.', 'error');
-        }
-      } catch (err) {
-        showToast('Search service unavailable', 'error');
+
+  if (searchInput && typeof google !== 'undefined') {
+    autocomplete = new google.maps.places.Autocomplete(searchInput);
+    autocomplete.addListener('place_changed', () => {
+      const place = autocomplete.getPlace();
+      if (!place.geometry || !place.geometry.location) {
+        showToast('Please select a valid location from the dropdown.', 'error');
+        return;
       }
-      searchBtn.innerHTML = '<i class="fas fa-location-arrow"></i>';
-    };
-    searchBtn.onclick = handleSearch;
-    searchInput.onkeypress = (e) => { if (e.key === 'Enter') handleSearch(); };
+      
+      const pos = place.geometry.location;
+      if (!map) {
+        map = new google.maps.Map(document.getElementById('googleMap'), {
+          center: pos,
+          zoom: 15,
+        });
+        map.addListener('click', (e) => {
+          placeMarkerAndPanTo(e.latLng, map);
+        });
+      } else {
+        map.setCenter(pos);
+        map.setZoom(15);
+      }
+      
+      placeMarkerAndPanTo(pos, map);
+      document.getElementById('mapAddress').value = place.formatted_address || place.name || '';
+    });
   }
 
   if (confirmBtn) {
     confirmBtn.onclick = () => {
       const address = document.getElementById('mapAddress').value;
       if (!marker) {
-        showToast('Please click on the map or search to select a location', 'error');
+        showToast('Please search or click on the map to select a location', 'error');
         return;
       }
-      const pos = marker.getLatLng();
-      submitPickupRequest(currentDonationIdForMap, pos.lat, pos.lng, address);
+      const pos = marker.getPosition();
+      submitPickupRequest(currentDonationIdForMap, pos.lat(), pos.lng(), address);
     };
   }
+}
+
+function placeMarkerAndPanTo(latLng, map) {
+  if (marker) {
+    marker.setPosition(latLng);
+  } else {
+    marker = new google.maps.Marker({
+      position: latLng,
+      map: map,
+      animation: google.maps.Animation.DROP
+    });
+  }
+  map.panTo(latLng);
 }
 
 function openMapForPickup(donationId) {
   if (!token) {
     showToast('Please login to request a pickup', 'error');
     loginBtn.click();
+    return;
+  }
+  
+  if (typeof google === 'undefined') {
+    showToast('Map service is not available (API key missing).', 'error');
     return;
   }
   
@@ -543,23 +604,24 @@ function openMapForPickup(donationId) {
   
   setTimeout(() => {
     if (!map) {
-      map = L.map('leafletMap').setView([19.0760, 72.8777], 11); // Mumbai default
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors'
-      }).addTo(map);
-      
-      map.on('click', (e) => {
-        if (marker) map.removeLayer(marker);
-        marker = L.marker(e.latlng).addTo(map);
+      const defaultPos = { lat: 19.0760, lng: 72.8777 }; // Mumbai default
+      map = new google.maps.Map(document.getElementById('googleMap'), {
+        center: defaultPos,
+        zoom: 11,
       });
-    } else {
-      map.invalidateSize();
-      if (marker) map.removeLayer(marker);
+      map.addListener('click', (e) => {
+        placeMarkerAndPanTo(e.latLng, map);
+      });
     }
-  }, 300);
+  }, 100);
 }
 
 function viewLocationOnMap(lat, lng, address) {
+  if (typeof google === 'undefined') {
+    showToast('Map service is not available (API key missing).', 'error');
+    return;
+  }
+
   const mapModal = document.getElementById('mapModal');
   const addressGroup = document.getElementById('addressGroup');
   const confirmBtn = document.getElementById('confirmLocationBtn');
@@ -569,19 +631,31 @@ function viewLocationOnMap(lat, lng, address) {
   confirmBtn.style.display = 'none';
   
   setTimeout(() => {
+    const pos = { lat: parseFloat(lat), lng: parseFloat(lng) };
     if (!map) {
-      map = L.map('leafletMap').setView([lat, lng], 14);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+      map = new google.maps.Map(document.getElementById('googleMap'), {
+        center: pos,
+        zoom: 15,
+      });
     } else {
-      map.setView([lat, lng], 14);
-      map.invalidateSize();
+      map.setCenter(pos);
+      map.setZoom(15);
     }
     
-    if (marker) map.removeLayer(marker);
-    marker = L.marker([lat, lng]).addTo(map)
-      .bindPopup(`<div class="map-marker-popup"><b>Pickup Point</b><br>${address || 'No address provided'}</div>`)
-      .openPopup();
-  }, 300);
+    if (marker) {
+      marker.setMap(null);
+    }
+    
+    marker = new google.maps.Marker({
+      position: pos,
+      map: map
+    });
+    
+    const infoWindow = new google.maps.InfoWindow({
+      content: `<div class="map-marker-popup" style="color:#000;"><b>Pickup Point</b><br>${address || 'No address provided'}</div>`
+    });
+    infoWindow.open(map, marker);
+  }, 100);
 }
 
 async function submitPickupRequest(id, lat, lng, address) {

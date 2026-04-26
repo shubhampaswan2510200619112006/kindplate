@@ -13,7 +13,6 @@
     href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,600&family=Jost:wght@200;300;400;500;600&family=Cormorant:wght@300;400;500&display=swap"
     rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="styles.css">
 </head>
 
@@ -123,6 +122,27 @@
         <h3>Meal Delivered</h3>
         <p>Fresh meals reach those in need — with zero effort from you.</p>
         <div class="step-arrow last"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ JOIN CAUSE SECTION ═══ -->
+  <section id="join-cause" class="stats-section">
+    <div class="container text-center">
+      <h2 style="margin-bottom: 2rem;">Be the Change You Wish to See</h2>
+      <div style="display: flex; gap: 2rem; flex-wrap: wrap; justify-content: center;">
+        <div class="stat-card glass" style="flex: 1; min-width: 300px; padding: 2rem;">
+          <i class="fas fa-handshake" style="font-size: 3rem; color: var(--green); margin-bottom: 1rem;"></i>
+          <h3>Partner with Us</h3>
+          <p style="color: var(--text-muted); margin-bottom: 1.5rem;">Are you an NGO? Register with KindPlate to access a steady stream of food donations in your area and minimize waste.</p>
+          <button class="btn btn-primary glow-btn" id="joinNgoBtn">Register your NGO</button>
+        </div>
+        <div class="stat-card glass" style="flex: 1; min-width: 300px; padding: 2rem;">
+          <i class="fas fa-hands-helping" style="font-size: 3rem; color: var(--green); margin-bottom: 1rem;"></i>
+          <h3>Volunteer Now</h3>
+          <p style="color: var(--text-muted); margin-bottom: 1.5rem;">Have some free time? Help us transport food from donors to shelters. Your effort makes a massive difference.</p>
+          <button class="btn btn-outline" id="joinVolunteerBtn" style="border-color: var(--green); color: var(--green);">Become a Volunteer</button>
+        </div>
       </div>
     </div>
   </section>
@@ -354,29 +374,33 @@
           <a href="javascript:void(0)" class="social-btn footer-placeholder"><i class="fab fa-twitter"></i></a>
           <a href="javascript:void(0)" class="social-btn footer-placeholder"><i class="fab fa-linkedin"></i></a>
         </div>
-      </div>
-      <div class="contact-card">
-        <form id="contactForm">
-          <div class="form-row">
+        <div class="contact-card">
+          <form class="glass form-container" id="contactForm">
             <div class="form-group">
-              <label><i class="fas fa-user"></i> Name</label>
-              <input type="text" name="name" placeholder="Your name" required>
+              <label>Name</label>
+              <input type="text" placeholder="John Doe" required>
             </div>
             <div class="form-group">
-              <label><i class="fas fa-envelope"></i> Email</label>
-              <input type="email" name="email" placeholder="your@email.com" required>
+              <label>Email</label>
+              <input type="email" placeholder="john@example.com" required>
             </div>
-          </div>
-          <div class="form-group">
-            <label><i class="fas fa-message"></i> Message</label>
-            <textarea name="message" rows="4" placeholder="How can we help you?" required></textarea>
-          </div>
-          <button type="submit" class="btn btn-primary full-width glow-btn">
-            <i class="fas fa-paper-plane"></i> Send Message
-          </button>
-        </form>
+            <div class="form-group">
+              <label>Inquiry Type</label>
+              <select class="file-input" style="padding: 0.8rem; background: var(--surface2); border: 1px solid var(--border); color: var(--text); border-radius: 0; width: 100%;">
+                <option>General Support</option>
+                <option>NGO Partnership Inquiry</option>
+                <option>Volunteer Verification</option>
+                <option>Report an Issue</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Message</label>
+              <textarea placeholder="How can we help?" style="width:100%; padding:0.8rem; border:1px solid var(--border); background:var(--surface2); color:var(--text); min-height:100px; border-radius:0;" required></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary full-width glow-btn">Send Message</button>
+          </form>
+        </div>
       </div>
-    </div>
   </section>
 
   <!-- ═══ FOOTER ═══ -->
@@ -492,18 +516,17 @@
     <div class="modal-content glass" style="max-width: 600px; padding: 2rem;">
       <span class="close" id="closeMap">&times;</span>
       <h2 style="font-family: var(--font-display); font-size: 2rem; margin-bottom: 0.5rem;"><i class="fas fa-map-location-dot" style="color: var(--green);"></i> Pickup Location</h2>
-      <p style="color: var(--text-muted); margin-bottom: 1rem; font-size: 0.9rem;">Click on the map to drop a pin where you want to pick up the food, or view the NGO's location.</p>
-      
-      <div id="leafletMap" style="width: 100%; height: 350px; background: #e5e5e5; border-radius: 8px; margin-bottom: 1rem; z-index: 1;"></div>
+      <p style="color: var(--text-muted); margin-bottom: 1rem; font-size: 0.9rem;">Type an address to set the pickup location, or view the NGO's location.</p>
       
       <div class="form-group" style="margin-bottom: 1rem;">
         <label><i class="fas fa-search"></i> Search Address</label>
         <div style="display: flex; gap: 0.5rem;">
           <input type="text" id="mapSearchInput" placeholder="Enter city, area or street..." style="flex: 1; padding: 0.8rem; border: 1px solid var(--border); background: var(--surface2); color: var(--text);">
-          <button class="btn btn-secondary" id="mapSearchBtn" style="padding: 0.8rem 1.2rem; border-radius: 0;"><i class="fas fa-location-arrow"></i></button>
         </div>
       </div>
 
+      <div id="googleMap" style="width: 100%; height: 350px; background: #e5e5e5; border-radius: 8px; margin-bottom: 1rem; z-index: 1;"></div>
+      
       <div class="form-group" id="addressGroup">
         <label>Final Address / Landmark Detail</label>
         <input type="text" id="mapAddress" placeholder="e.g. Apt 4, Near Central Station" style="width: 100%; padding: 0.8rem; border: 1px solid var(--border); background: var(--surface2); color: var(--text);">
@@ -556,8 +579,9 @@
     </div>
   </div>
 
+  <!-- Map Script container -->
+  <div id="mapScriptContainer"></div>
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1"></script>
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="script.js"></script>
 </body>
 
