@@ -10,8 +10,6 @@ const fs = require('fs');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const compression = require('compression');
-const cloudinary = require('cloudinary').v2;
-const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const { GoogleGenAI } = require('@google/genai');
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || 'MISSING_KEY' });
@@ -104,14 +102,22 @@ const fileFilter = (req, file, cb) => {
 };
 
 let storage;
-if (process.env.CLOUDINARY_URL) {
-  // Production: Direct to Cloudinary
-  storage = new CloudinaryStorage({
-    cloudinary: cloudinary,
-    params: { folder: 'kindplate', allowed_formats: ['jpg', 'jpeg', 'png', 'webp'] }
-  });
-} else {
-  // Fallback: Memory Storage (base64)
+try {
+  if (process.env.CLOUDINARY_URL && process.env.CLOUDINARY_URL.startsWith('cloudinary://')) {
+    const cloudinary = require('cloudinary').v2;
+    const { CloudinaryStorage } = require('multer-storage-cloudinary');
+    // Production: Direct to Cloudinary
+    storage = new CloudinaryStorage({
+      cloudinary: cloudinary,
+      params: { folder: 'kindplate', allowed_formats: ['jpg', 'jpeg', 'png', 'webp'] }
+    });
+    console.log("Cloudinary storage configured successfully.");
+  } else {
+    // Fallback: Memory Storage (base64)
+    storage = multer.memoryStorage();
+  }
+} catch (err) {
+  console.error("Cloudinary setup failed, falling back to memory storage:", err.message);
   storage = multer.memoryStorage();
 }
 
