@@ -255,13 +255,15 @@ function showLoggedInState(name, impactCount = 0) {
 function applyRoleBasedView() {
   const joinCauseSec = document.getElementById('join-cause');
   const donateSec = document.getElementById('donate');
-  const feedSec = document.getElementById('feed');
+  const feedSec = document.getElementById('find'); // The id in index.html is 'find', not 'feed'
+  const filterSection = document.querySelector('.filters'); // Also hide/show filters if needed
   
   if (!currentUser) {
     // Logged out
     if (joinCauseSec) joinCauseSec.style.display = '';
     if (donateSec) donateSec.style.display = '';
     if (feedSec) feedSec.style.display = '';
+    if (filterSection) filterSection.style.display = '';
     const analyticsDash = document.getElementById('analyticsDash');
     if (analyticsDash) analyticsDash.style.display = 'none';
     return;
@@ -273,9 +275,11 @@ function applyRoleBasedView() {
   if (currentUser.role === 'Donor') {
     if (donateSec) donateSec.style.display = '';
     if (feedSec) feedSec.style.display = 'none';
+    if (filterSection) filterSection.style.display = 'none';
   } else if (currentUser.role === 'NGO' || currentUser.role === 'Volunteer') {
     if (donateSec) donateSec.style.display = 'none';
     if (feedSec) feedSec.style.display = '';
+    if (filterSection) filterSection.style.display = '';
   }
 }
 
