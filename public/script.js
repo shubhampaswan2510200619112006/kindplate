@@ -257,29 +257,44 @@ function showLoggedInState(name, impactCount = 0) {
 function applyRoleBasedView() {
   const joinCauseSec = document.getElementById('join-cause');
   const donateSec = document.getElementById('donate');
-  const feedSec = document.getElementById('find'); // The id in index.html is 'find', not 'feed'
-  const filterSection = document.querySelector('.filters'); // Also hide/show filters if needed
+  const feedSec = document.getElementById('find');
+  const filterSection = document.querySelector('.filters');
+  const navDonate = document.getElementById('navDonate');
+  const navFind = document.getElementById('navFind');
+  const myDonationsLink = document.getElementById('myDonationsLink');
   
   if (!currentUser) {
-    // Logged out
     if (joinCauseSec) joinCauseSec.style.display = '';
     if (donateSec) donateSec.style.display = '';
     if (feedSec) feedSec.style.display = '';
     if (filterSection) filterSection.style.display = '';
+    if (navDonate) navDonate.style.display = '';
+    if (navFind) {
+      navFind.style.display = '';
+      navFind.textContent = 'Find Food';
+    }
     const analyticsDash = document.getElementById('analyticsDash');
     if (analyticsDash) analyticsDash.style.display = 'none';
     return;
   }
   
-  // Logged in
   if (joinCauseSec) joinCauseSec.style.display = 'none';
   
   if (currentUser.role === 'Donor') {
     if (donateSec) donateSec.style.display = '';
     if (feedSec) feedSec.style.display = 'none';
     if (filterSection) filterSection.style.display = 'none';
+    if (navDonate) navDonate.style.display = '';
+    if (navFind) navFind.style.display = 'none';
+    if (myDonationsLink) myDonationsLink.innerHTML = '<i class="fas fa-list"></i> My Donations';
   } else if (currentUser.role === 'NGO') {
     if (donateSec) donateSec.style.display = 'none';
+    if (navDonate) navDonate.style.display = 'none';
+    if (navFind) {
+      navFind.style.display = '';
+      navFind.textContent = 'Claim Food';
+    }
+    if (myDonationsLink) myDonationsLink.innerHTML = '<i class="fas fa-list"></i> NGO Dashboard';
     if (feedSec) {
       feedSec.style.display = '';
       const title = feedSec.querySelector('.section-title');
@@ -290,6 +305,12 @@ function applyRoleBasedView() {
     if (filterSection) filterSection.style.display = '';
   } else if (currentUser.role === 'Volunteer') {
     if (donateSec) donateSec.style.display = 'none';
+    if (navDonate) navDonate.style.display = 'none';
+    if (navFind) {
+      navFind.style.display = '';
+      navFind.textContent = 'Live Routes';
+    }
+    if (myDonationsLink) myDonationsLink.innerHTML = '<i class="fas fa-route"></i> Delivery History';
     if (feedSec) {
       feedSec.style.display = '';
       const title = feedSec.querySelector('.section-title');
