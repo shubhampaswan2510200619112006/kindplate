@@ -234,6 +234,15 @@
       <span class="section-badge">Your Profile</span>
       <h2 class="section-title">Your <span class="gradient-text">impact</span></h2>
     </div>
+    
+    <div id="analyticsDash" style="display: none; justify-content: center; gap: 2rem; margin-bottom: 2rem; flex-wrap: wrap;">
+      <div class="glass" style="padding: 1.5rem; border-radius: 12px; min-width: 200px; text-align: center;">
+        <i class="fas fa-chart-line" style="font-size: 2rem; color: var(--green); margin-bottom: 1rem;"></i>
+        <h3 id="analyticsCount" style="font-size: 2.5rem; margin-bottom: 0.5rem; color: var(--text);">0</h3>
+        <p id="analyticsLabel" style="color: var(--text-muted); font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px;">Total Impact</p>
+      </div>
+    </div>
+    
     <div id="dashboardContent" class="dashboard-grid"></div>
   </section>
 
@@ -402,6 +411,29 @@
           </form>
         </div>
       </div>
+  </section>
+
+  <!-- ═══ LEADERBOARD ═══ -->
+  <section class="container" id="leaderboard">
+    <div class="section-header">
+      <span class="section-badge">Wall of Fame</span>
+      <h2 class="section-title">Top <span class="gradient-text">Contributors</span></h2>
+      <p class="section-sub">Celebrating those who make the biggest impact</p>
+    </div>
+    <div style="display: flex; gap: 2rem; flex-wrap: wrap; justify-content: center;">
+      <div class="glass" style="flex: 1; min-width: 300px; padding: 2rem; border-radius: 12px;">
+        <h3 style="color: var(--green); margin-bottom: 1rem;"><i class="fas fa-hand-holding-heart"></i> Top Donors</h3>
+        <ul id="topDonorsList" style="list-style: none; padding: 0;">
+          <li>Loading...</li>
+        </ul>
+      </div>
+      <div class="glass" style="flex: 1; min-width: 300px; padding: 2rem; border-radius: 12px;">
+        <h3 style="color: var(--gold); margin-bottom: 1rem;"><i class="fas fa-truck-fast"></i> Top Volunteers & NGOs</h3>
+        <ul id="topVolunteersList" style="list-style: none; padding: 0;">
+          <li>Loading...</li>
+        </ul>
+      </div>
+    </div>
   </section>
 
   <!-- ═══ FOOTER ═══ -->
@@ -576,6 +608,28 @@
       <h2 id="supportTitle" style="font-family: var(--font-display); font-size: 2.5rem; margin-bottom: 1.5rem; color: var(--green-dark);">Title</h2>
       <div id="supportContent" style="color: var(--text-muted); line-height: 1.8;">
         <!-- Content injected via JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ PROFILE MODAL ═══ -->
+  <div id="profileModal" class="modal">
+    <div class="modal-content glass" style="max-width: 400px; text-align: center;">
+      <span class="close" id="closeProfile">&times;</span>
+      <div class="review-avatar" id="profileAvatar" style="width: 80px; height: 80px; font-size: 2rem; margin: 0 auto 1rem;">?</div>
+      <h2 id="profileName" style="font-family: var(--font-display); font-size: 2rem;">Name</h2>
+      <p id="profileRole" style="color: var(--green); font-weight: 500; margin-bottom: 1rem;">Role</p>
+      
+      <div style="display: flex; justify-content: center; gap: 2rem; margin-top: 1.5rem; background: var(--surface2); padding: 1rem; border-radius: 8px;">
+        <div>
+          <div id="profileImpactCount" style="font-size: 1.5rem; font-weight: bold; color: var(--text);">0</div>
+          <div id="profileImpactLabel" style="font-size: 0.8rem; color: var(--text-muted);">Impacts</div>
+        </div>
+        <div style="width: 1px; background: var(--border);"></div>
+        <div>
+          <div id="profileRating" style="font-size: 1.5rem; font-weight: bold; color: gold;">0.0 <i class="fas fa-star" style="font-size: 1rem;"></i></div>
+          <div id="profileReviewsCount" style="font-size: 0.8rem; color: var(--text-muted);">0 Reviews</div>
+        </div>
       </div>
     </div>
   </div>

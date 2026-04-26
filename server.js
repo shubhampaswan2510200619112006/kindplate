@@ -117,6 +117,22 @@ const auth = async (req, res, next) => {
 
 // ========== ROUTES ==========
 
+// SSE Clients Array
+let clients = [];
+
+app.get('/api/stream', (req, res) => {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders();
+  
+  clients.push(res);
+  
+  req.on('close', () => {
+    clients = clients.filter(client => client !== res);
+  });
+});
+
 // Signup
 app.post('/api/signup', async (req, res) => {
   try {
@@ -137,7 +153,7 @@ app.post('/api/signup', async (req, res) => {
     await user.save();
 
     const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '7d' });
-    res.json({ token, user: { id: user._id, name: user.name, email: user.email, role: user.role } });
+    res.json({ token, user: { id: user._id, name: user.name, email: user.email, role: user.role }, impactCount: 0 });
   } catch (err) {
     res.status(500).json({ error: 'Server error' });
   }
@@ -154,15 +170,36 @@ app.post('/api/login', authLimiter, async (req, res) => {
     if (!match) return res.status(400).json({ error: 'Invalid credentials' });
 
     const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '7d' });
-    res.json({ token, user: { id: user._id, name: user.name, email: user.email, role: user.role } });
+    
+    let impactCount = 0;
+    if (user.role === 'Donor') {
+      impactCount = await Donation.countDocuments({ user: user._id });
+    } else {
+      impactCount = await Donation.countDocuments({ pickedBy: user._id, status: 'Picked' });
+    }
+
+    res.json({ token, user: { id: user._id, name: user.name, email: user.email, role: user.role }, impactCount });
   } catch (err) {
     res.status(500).json({ error: 'Server error' });
   }
 });
 
-// Get current user
-app.get('/api/user', auth, (req, res) => {
-  res.json({ user: { id: req.user._id, name: req.user.name, email: req.user.email, role: req.user.role } });
+// Get current user (with impact stats)
+app.get('/api/user', auth, async (req, res) => {
+  try {
+    let impactCount = 0;
+    if (req.user.role === 'Donor') {
+      impactCount = await Donation.countDocuments({ user: req.user._id });
+    } else {
+      impactCount = await Donation.countDocuments({ pickedBy: req.user._id, status: 'Picked' });
+    }
+    res.json({ 
+      user: { id: req.user._id, name: req.user.name, email: req.user.email, role: req.user.role },
+      impactCount
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Server error' });
+  }
 });
 
 // Create donation
@@ -195,10 +232,13 @@ app.post('/api/donate', auth, upload.single('image'), async (req, res) => {
       image: imageData,
       tag
     });
-    await donation.save();
+    const newDonation = await donation.save();
     await donation.populate('user', 'name');
 
-    res.status(201).json({ donation, message: 'Donation added successfully' });
+    // Broadcast to all SSE clients
+    clients.forEach(client => client.write(`data: ${JSON.stringify({ type: 'new_donation', donation: newDonation })}\n\n`));
+
+    res.status(201).json({ donation: newDonation, message: 'Donation added successfully' });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Server error' });
@@ -312,8 +352,62 @@ app.post('/api/chat', apiLimiter, async (req, res) => {
     res.json({ reply: response.text });
   } catch (err) {
     console.error('AI Error:', err);
-    res.status(500).json({ reply: "I'm having trouble connecting to my neural network right now. Try again later!" });
+    res.status(500).json({ error: 'Server error' });
   }
 });
 
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+// Leaderboard Aggregation
+app.get('/api/leaderboard', async (req, res) => {
+  try {
+    const topDonors = await Donation.aggregate([
+      { $group: { _id: '$user', count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+      { $limit: 3 },
+      { $lookup: { from: 'users', localField: '_id', foreignField: '_id', as: 'user' } },
+      { $unwind: '$user' },
+      { $project: { _id: 1, name: '$user.name', count: 1 } }
+    ]);
+
+    const topVolunteers = await Donation.aggregate([
+      { $match: { status: 'Picked' } },
+      { $group: { _id: '$pickedBy', count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+      { $limit: 3 },
+      { $lookup: { from: 'users', localField: '_id', foreignField: '_id', as: 'user' } },
+      { $unwind: '$user' },
+      { $project: { _id: 1, name: '$user.name', count: 1 } }
+    ]);
+
+    res.json({ topDonors, topVolunteers });
+  } catch (err) {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Public Profile
+app.get('/api/user/:id/profile', async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id).select('name role createdAt');
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    let count = 0;
+    if (user.role === 'Donor') {
+      count = await Donation.countDocuments({ user: user._id });
+    } else {
+      count = await Donation.countDocuments({ pickedBy: user._id, status: 'Picked' });
+    }
+
+    const reviews = await Review.find({ toUser: user._id });
+    const avgRating = reviews.length > 0 
+      ? (reviews.reduce((acc, rev) => acc + rev.rating, 0) / reviews.length).toFixed(1)
+      : 'New';
+
+    res.json({ user, count, avgRating, totalReviews: reviews.length });
+  } catch (err) {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+app.listen(PORT, () => {
+  console.log(`Server running on http://localhost:${PORT}`);
+});

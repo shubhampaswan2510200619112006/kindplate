@@ -146,7 +146,9 @@ document.addEventListener('DOMContentLoaded', () => {
   setupSupportModals();
   setupMaps();
   setupFeedback();
-  setupFeedback();
+  fetchLeaderboard();
+  initSSE();
+  startExpiryTimers();
 });
 
 // ========== HAMBURGER MENU ==========
@@ -228,10 +230,25 @@ function setupUserDropdown() {
 }
 
 // ========== SHOW LOGGED IN STATE ==========
-function showLoggedInState(name) {
+function showLoggedInState(name, impactCount = 0) {
   if (loginBtn) loginBtn.style.display = 'none';
   if (userMenuWrap) userMenuWrap.style.display = 'flex';
   if (userBtnName) userBtnName.textContent = name.split(' ')[0];
+  
+  const analyticsDash = document.getElementById('analyticsDash');
+  const analyticsCount = document.getElementById('analyticsCount');
+  const analyticsLabel = document.getElementById('analyticsLabel');
+  
+  if (analyticsDash && analyticsCount && analyticsLabel) {
+    analyticsDash.style.display = 'flex';
+    analyticsCount.textContent = impactCount;
+    if (currentUser?.role === 'Donor') {
+      analyticsLabel.textContent = 'Donations Posted';
+    } else {
+      analyticsLabel.textContent = 'Pickups Completed';
+    }
+  }
+  
   applyRoleBasedView();
 }
 
@@ -245,6 +262,8 @@ function applyRoleBasedView() {
     if (joinCauseSec) joinCauseSec.style.display = '';
     if (donateSec) donateSec.style.display = '';
     if (feedSec) feedSec.style.display = '';
+    const analyticsDash = document.getElementById('analyticsDash');
+    if (analyticsDash) analyticsDash.style.display = 'none';
     return;
   }
   
@@ -350,7 +369,7 @@ function setupAuth() {
       token = data.token;
       currentUser = data.user;
       localStorage.setItem('token', token);
-      showLoggedInState(currentUser.name);
+      showLoggedInState(currentUser.name, data.impactCount);
       modal.style.display = 'none';
       authForm.reset();
       authMessage.textContent = '';
@@ -368,7 +387,7 @@ async function fetchUser() {
     if (!res.ok) throw new Error();
     const data = await res.json();
     currentUser = data.user;
-    showLoggedInState(currentUser.name);
+    showLoggedInState(currentUser.name, data.impactCount);
     fetchUserDonations();
   } catch (err) {
     localStorage.removeItem('token');
@@ -441,20 +460,24 @@ function renderDonations(filter = 'all', search = '') {
 
   let html = '';
   filtered.forEach(d => {
-    const expiryDate = new Date(d.expiry).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' });
     const isExpired = d.tag === 'Expired';
+    const expiryInfo = formatExpiryTime(d.expiry);
+    
     html += `
       <div class="card reveal ${isExpired ? 'expired-card' : ''}">
         ${imgTag(d.image, d.foodName)}
         <div class="card-content">
           <span class="card-tag tag-${d.tag.toLowerCase()}">${sanitizeHTML(d.tag)}</span>
           <h3>${sanitizeHTML(d.foodName)}</h3>
+          <p style="font-size: 0.85rem; margin-top: 4px; color: var(--text-muted);">
+            Posted by <a href="javascript:void(0)" onclick="openProfile('${d.user._id}')" style="color: var(--green); font-weight: 500;">${d.user.name}</a>
+          </p>
           <div class="card-meta">
             <span><i class="fas fa-utensils"></i> ${sanitizeHTML(d.quantity)}</span>
             <span><i class="fas fa-location-dot"></i> ${sanitizeHTML(d.location)}</span>
           </div>
-          <p style="font-size:0.82rem; color:var(--text-muted); margin-top:4px;">
-            <i class="fas fa-clock"></i> ${isExpired ? '<span style="color:#ef4444">Expired:</span>' : 'Expires:'} ${expiryDate}
+          <p class="expiry-timer ${expiryInfo.color}" data-expiry="${d.expiry}" style="font-size:0.82rem; margin-top:4px; font-weight: 500;">
+            ${expiryInfo.text}
           </p>
           ${isExpired
             ? `<button class="request-btn" disabled style="opacity:0.45; cursor:not-allowed;"><i class="fas fa-ban"></i> Expired</button>`
@@ -479,11 +502,13 @@ function renderFindDonations() {
   let html = '';
   active.forEach(d => {
     const statusClass = d.status === 'Picked' ? 'tag-expired' : (d.tag === 'Urgent' ? 'tag-urgent' : 'tag-fresh');
+    const expiryInfo = formatExpiryTime(d.expiry);
     let pickedByHtml = '';
+    
     if (d.status === 'Picked' && d.pickedBy) {
       pickedByHtml = `
         <div class="picked-by-info">
-          <strong><i class="fas fa-hand-holding-heart"></i> Accepted by ${d.pickedBy.name} (${d.pickedBy.role})</strong>
+          <strong><i class="fas fa-hand-holding-heart"></i> Accepted by <a href="javascript:void(0)" onclick="openProfile('${d.pickedBy._id}')" style="color: var(--green);">${d.pickedBy.name}</a></strong>
           <p><i class="fas fa-envelope"></i> ${d.pickedBy.email}</p>
           ${d.pickupLocation ? `
             <a class="view-map-link" onclick="viewLocationOnMap(${d.pickupLocation.lat}, ${d.pickupLocation.lng}, \`${sanitizeHTML(d.pickupLocation.address)}\`)">
@@ -499,10 +524,16 @@ function renderFindDonations() {
         <div class="card-content">
           <span class="card-tag ${statusClass}">${d.status === 'Picked' ? 'Claimed' : d.tag}</span>
           <h3>${sanitizeHTML(d.foodName)}</h3>
+          <p style="font-size: 0.85rem; margin-top: 4px; color: var(--text-muted);">
+            Posted by <a href="javascript:void(0)" onclick="openProfile('${d.user._id}')" style="color: var(--green); font-weight: 500;">${d.user.name}</a>
+          </p>
           <div class="card-meta">
             <span><i class="fas fa-utensils"></i> ${sanitizeHTML(d.quantity)}</span>
             <span><i class="fas fa-location-dot"></i> ${sanitizeHTML(d.location)}</span>
           </div>
+          <p class="expiry-timer ${expiryInfo.color}" data-expiry="${d.expiry}" style="font-size:0.82rem; margin-top:4px; font-weight: 500;">
+            ${expiryInfo.text}
+          </p>
           ${pickedByHtml}
           ${d.status === 'Pending' ? `<button class="request-btn" data-id="${d._id}"><i class="fas fa-hand-holding-heart"></i> Request Pickup</button>` : ''}
         </div>
@@ -1045,4 +1076,142 @@ themeToggle.addEventListener('click', () => {
   const isDark = body.classList.contains('dark');
   localStorage.setItem('darkMode', isDark);
   themeToggle.innerHTML = isDark ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+});
+
+// ========== NEW FEATURES (v2.0) ==========
+
+// 1. Real-Time Notifications (SSE)
+function initSSE() {
+  const eventSource = new EventSource('/api/stream');
+  eventSource.onmessage = (event) => {
+    try {
+      const data = JSON.parse(event.data);
+      if (data.type === 'new_donation') {
+        if (!currentUser || currentUser.role !== 'Donor') {
+          showToast(`🍲 New food just posted: ${data.donation.foodName}!`, 'info');
+          fetchDonations(); // Refresh feed
+        }
+      }
+    } catch (err) {
+      console.error('SSE Error:', err);
+    }
+  };
+}
+
+// 2. Expiry Countdowns
+function startExpiryTimers() {
+  setInterval(() => {
+    document.querySelectorAll('.expiry-timer').forEach(el => {
+      const expiry = new Date(el.dataset.expiry);
+      const now = new Date();
+      const diffMs = expiry - now;
+      
+      if (diffMs <= 0) {
+        el.innerHTML = '<i class="fas fa-exclamation-circle"></i> Expired';
+        el.className = 'expiry-timer text-red';
+        return;
+      }
+      
+      const hours = Math.floor(diffMs / (1000 * 60 * 60));
+      const mins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+      
+      el.innerHTML = `<i class="fas fa-clock"></i> Expires in ${hours}h ${mins}m`;
+      
+      if (hours < 2) {
+        el.className = 'expiry-timer text-red';
+      } else if (hours < 12) {
+        el.className = 'expiry-timer text-orange';
+      } else {
+        el.className = 'expiry-timer text-green';
+      }
+    });
+  }, 60000); // Update every minute
+}
+
+// Helper for initial render
+function formatExpiryTime(dateString) {
+  const expiry = new Date(dateString);
+  const now = new Date();
+  const diffMs = expiry - now;
+  
+  if (diffMs <= 0) return { text: '<i class="fas fa-exclamation-circle"></i> Expired', color: 'text-red' };
+  
+  const hours = Math.floor(diffMs / (1000 * 60 * 60));
+  const mins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+  const text = `<i class="fas fa-clock"></i> Expires in ${hours}h ${mins}m`;
+  
+  let color = 'text-green';
+  if (hours < 2) color = 'text-red';
+  else if (hours < 12) color = 'text-orange';
+  
+  return { text, color };
+}
+
+// 3. Impact Leaderboard
+async function fetchLeaderboard() {
+  const topDonorsList = document.getElementById('topDonorsList');
+  const topVolunteersList = document.getElementById('topVolunteersList');
+  if (!topDonorsList || !topVolunteersList) return;
+
+  try {
+    const res = await fetch('/api/leaderboard');
+    if (!res.ok) return;
+    const { topDonors, topVolunteers } = await res.json();
+    
+    topDonorsList.innerHTML = topDonors.map((d, i) => `
+      <li style="padding: 1rem 0; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between;">
+        <span><strong>#${i+1}</strong> ${d.name.split(' ')[0]}</span>
+        <span style="color: var(--text-muted);">${d.count} Meals</span>
+      </li>
+    `).join('') || '<li>No data yet</li>';
+
+    topVolunteersList.innerHTML = topVolunteers.map((v, i) => `
+      <li style="padding: 1rem 0; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between;">
+        <span><strong>#${i+1}</strong> ${v.name.split(' ')[0]}</span>
+        <span style="color: var(--text-muted);">${v.count} Deliveries</span>
+      </li>
+    `).join('') || '<li>No data yet</li>';
+    
+  } catch (err) {
+    console.error('Failed to load leaderboard');
+  }
+}
+
+// 4. Public Profiles
+async function openProfile(userId) {
+  const modal = document.getElementById('profileModal');
+  if (!modal) return;
+  
+  try {
+    const res = await fetch(`/api/user/${userId}/profile`);
+    if (!res.ok) throw new Error('User not found');
+    const data = await res.json();
+    
+    document.getElementById('profileName').textContent = data.user.name;
+    document.getElementById('profileRole').textContent = data.user.role;
+    document.getElementById('profileImpactCount').textContent = data.count;
+    document.getElementById('profileImpactLabel').textContent = data.user.role === 'Donor' ? 'Donations' : 'Pickups';
+    document.getElementById('profileRating').innerHTML = `${data.avgRating} <i class="fas fa-star" style="font-size: 1rem;"></i>`;
+    document.getElementById('profileReviewsCount').textContent = `${data.totalReviews} Reviews`;
+    
+    // Set initials avatar
+    const initials = data.user.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+    document.getElementById('profileAvatar').textContent = initials;
+    
+    modal.style.display = 'flex';
+  } catch (err) {
+    showToast('Failed to load profile', 'error');
+  }
+}
+
+// Setup Profile Modal Close
+document.addEventListener('DOMContentLoaded', () => {
+  const closeProfile = document.getElementById('closeProfile');
+  const profileModal = document.getElementById('profileModal');
+  if (closeProfile) {
+    closeProfile.onclick = () => profileModal.style.display = 'none';
+  }
+  window.addEventListener('click', (e) => {
+    if (e.target === profileModal) profileModal.style.display = 'none';
+  });
 });
