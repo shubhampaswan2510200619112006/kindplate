@@ -326,6 +326,15 @@ function setupAuth() {
     const name = formData.get('name');
     const role = formData.get('role');
 
+    if (!isLogin) {
+      const passwordRegex = /^(?=.*[A-Z])(?=.*\d)(?=.*[@#$%^&+=!_]).{6,}$/;
+      if (!passwordRegex.test(password)) {
+        authMessage.textContent = 'Password must be at least 6 characters, contain 1 capital letter, 1 number, and 1 special character.';
+        authMessage.style.color = '#ef4444';
+        return;
+      }
+    }
+
     const endpoint = isLogin ? '/api/login' : '/api/signup';
     const bodyData = isLogin ? { email, password } : { name, email, password, role };
 
