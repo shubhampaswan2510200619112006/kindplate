@@ -143,6 +143,8 @@ document.addEventListener('DOMContentLoaded', () => {
   setupContactForm();
   setupHamburger();
   setupFooterPlaceholders();
+  setupSupportModals();
+  setupMaps();
 });
 
 // ========== HAMBURGER MENU ==========
@@ -236,6 +238,8 @@ function setupAuth() {
       modal.style.display = 'flex';
       modalTitle.textContent = 'Login';
       nameField.style.display = 'none';
+      const roleField = document.getElementById('roleField');
+      if (roleField) roleField.style.display = 'none';
       authSubmit.textContent = 'Login';
       toggleAuth.innerHTML = `Don't have an account? <a href="#" id="switchToSignup">Sign up</a>`;
       document.getElementById('switchToSignup').addEventListener('click', (e) => {
@@ -245,21 +249,37 @@ function setupAuth() {
     });
   }
 
+  const roleField = document.getElementById('roleField');
+
+  function showSignup() {
+    modalTitle.textContent = 'Create Account';
+    nameField.style.display = 'block';
+    if (roleField) roleField.style.display = 'block';
+    authSubmit.textContent = 'Sign Up';
+    toggleAuth.innerHTML = `Already have an account? <a href="#" id="switchToLogin">Login</a>`;
+    document.getElementById('switchToLogin').addEventListener('click', (e) => {
+      e.preventDefault();
+      loginBtn.click();
+    });
+  }
+
   closeModal.addEventListener('click', () => modal.style.display = 'none');
   window.addEventListener('click', (e) => { if (e.target === modal) modal.style.display = 'none'; });
 
   authForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const formData = new FormData(authForm);
+    const isLogin = modalTitle.textContent === 'Login';
     const email = formData.get('email');
     const password = formData.get('password');
     const name = formData.get('name');
-    const isLogin = modalTitle.textContent === 'Login';
-    const url = isLogin ? '/api/login' : '/api/signup';
-    const bodyData = isLogin ? { email, password } : { name, email, password };
+    const role = formData.get('role');
+
+    const endpoint = isLogin ? '/api/login' : '/api/signup';
+    const bodyData = isLogin ? { email, password } : { name, email, password, role };
 
     try {
-      const res = await fetch(url, {
+      const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(bodyData)
@@ -282,24 +302,6 @@ function setupAuth() {
   });
 }
 
-function showSignup() {
-  modalTitle.textContent = 'Sign Up';
-  nameField.style.display = 'block';
-  authSubmit.textContent = 'Sign Up';
-  toggleAuth.innerHTML = `Already have an account? <a href="#" id="switchToLogin">Login</a>`;
-  document.getElementById('switchToLogin').addEventListener('click', (e) => {
-    e.preventDefault();
-    modalTitle.textContent = 'Login';
-    nameField.style.display = 'none';
-    authSubmit.textContent = 'Login';
-    toggleAuth.innerHTML = `Don't have an account? <a href="#" id="switchToSignup">Sign up</a>`;
-    document.getElementById('switchToSignup').addEventListener('click', (e2) => {
-      e2.preventDefault();
-      showSignup();
-    });
-  });
-}
-
 async function fetchUser() {
   try {
     const res = await fetch('/api/user', { headers: { 'Authorization': `Bearer ${token}` } });
@@ -313,6 +315,9 @@ async function fetchUser() {
     token = null;
   }
 }
+
+// ========== PLACEHOLDER IMAGE ==========
+const PLACEHOLDER_IMG = 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&q=80';
 
 // ========== PLACEHOLDER IMAGE ==========
 const PLACEHOLDER_IMG = 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&q=80';
@@ -354,15 +359,12 @@ function renderDonations(filter = 'all', search = '') {
   if (!foodGrid) return;
   let filtered = allDonations;
 
-  // When filtering by Fresh or Urgent, exclude expired items
   if (filter === 'Fresh') {
     filtered = filtered.filter(d => d.tag === 'Fresh');
   } else if (filter === 'Urgent') {
     filtered = filtered.filter(d => d.tag === 'Urgent');
   } else if (filter === 'Expired') {
     filtered = filtered.filter(d => d.tag === 'Expired');
-  } else {
-    // 'all' — show everything
   }
 
   if (search) {
@@ -412,7 +414,6 @@ function renderDonations(filter = 'all', search = '') {
 
 function renderFindDonations() {
   if (!findGrid) return;
-  // Show only non-expired in Find Food section
   const active = allDonations.filter(d => d.tag !== 'Expired');
   if (active.length === 0) {
     findGrid.innerHTML = '<p class="empty-state" style="grid-column:1/-1; text-align:center; color:var(--text-muted); padding:2rem;">No active food donations at the moment.</p>';
@@ -420,19 +421,33 @@ function renderFindDonations() {
   }
   let html = '';
   active.forEach(d => {
-    const expiryDate = new Date(d.expiry).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' });
+    const statusClass = d.status === 'Picked' ? 'tag-expired' : (d.tag === 'Urgent' ? 'tag-urgent' : 'tag-fresh');
+    let pickedByHtml = '';
+    if (d.status === 'Picked' && d.pickedBy) {
+      pickedByHtml = `
+        <div class="picked-by-info">
+          <strong><i class="fas fa-hand-holding-heart"></i> Accepted by ${d.pickedBy.name} (${d.pickedBy.role})</strong>
+          <p><i class="fas fa-envelope"></i> ${d.pickedBy.email}</p>
+          ${d.pickupLocation ? `
+            <a class="view-map-link" onclick="viewLocationOnMap(${d.pickupLocation.lat}, ${d.pickupLocation.lng}, '${d.pickupLocation.address}')">
+              <i class="fas fa-location-dot"></i> View Pickup Point
+            </a>
+          ` : ''}
+        </div>
+      `;
+    }
     html += `
       <div class="card reveal">
-        ${imgTag(d.image, d.foodName)}
+        <div class="card-img-wrap">${imgTag(d.image, d.foodName)}</div>
         <div class="card-content">
-          <span class="card-tag tag-${d.tag.toLowerCase()}">${sanitizeHTML(d.tag)}</span>
+          <span class="card-tag ${statusClass}">${d.status === 'Picked' ? 'Claimed' : d.tag}</span>
           <h3>${sanitizeHTML(d.foodName)}</h3>
           <div class="card-meta">
             <span><i class="fas fa-utensils"></i> ${sanitizeHTML(d.quantity)}</span>
             <span><i class="fas fa-location-dot"></i> ${sanitizeHTML(d.location)}</span>
           </div>
-          <p style="font-size:0.82rem; color:var(--text-muted); margin-top:4px;"><i class="fas fa-clock"></i> Expires: ${expiryDate}</p>
-          <button class="request-btn" data-id="${d._id}"><i class="fas fa-hand-holding-heart"></i> Request Pickup</button>
+          ${pickedByHtml}
+          ${d.status === 'Pending' ? `<button class="request-btn" data-id="${d._id}"><i class="fas fa-hand-holding-heart"></i> Request Pickup</button>` : ''}
         </div>
       </div>
     `;
@@ -444,24 +459,9 @@ function renderFindDonations() {
 
 function attachRequestButtons() {
   document.querySelectorAll('.request-btn:not([disabled])').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      if (!currentUser) { showToast('Please login to request pickup', 'error'); return; }
+    btn.addEventListener('click', () => {
       const id = btn.dataset.id;
-      try {
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Requesting...';
-        const res = await fetch(`/api/request-pickup/${id}`, {
-          method: 'POST',
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        if (!res.ok) throw new Error();
-        btn.innerHTML = '<i class="fas fa-check"></i> Requested!';
-        showToast('Pickup requested! The donor will be notified.', 'success');
-      } catch (err) {
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fas fa-hand-holding-heart"></i> Request Pickup';
-        showToast('Failed to request pickup', 'error');
-      }
+      openMapForPickup(id);
     });
   });
 }
@@ -471,6 +471,112 @@ function observeCards() {
     entries.forEach(entry => { if (entry.isIntersecting) entry.target.classList.add('revealed'); });
   }, { threshold: 0.1 });
   document.querySelectorAll('.card').forEach(card => cardObserver.observe(card));
+}
+
+// ========== MAP LOGIC (Leaflet) ==========
+let map;
+let marker;
+let currentDonationIdForMap;
+
+function setupMaps() {
+  const closeMap = document.getElementById('closeMap');
+  const mapModal = document.getElementById('mapModal');
+  const confirmBtn = document.getElementById('confirmLocationBtn');
+  
+  if (closeMap) closeMap.onclick = () => mapModal.style.display = 'none';
+  
+  if (confirmBtn) {
+    confirmBtn.onclick = () => {
+      const address = document.getElementById('mapAddress').value;
+      if (!marker) {
+        showToast('Please click on the map to select a location', 'error');
+        return;
+      }
+      const pos = marker.getLatLng();
+      submitPickupRequest(currentDonationIdForMap, pos.lat, pos.lng, address);
+    };
+  }
+}
+
+function openMapForPickup(donationId) {
+  if (!token) {
+    showToast('Please login to request a pickup', 'error');
+    loginBtn.click();
+    return;
+  }
+  
+  currentDonationIdForMap = donationId;
+  const mapModal = document.getElementById('mapModal');
+  const addressGroup = document.getElementById('addressGroup');
+  const confirmBtn = document.getElementById('confirmLocationBtn');
+  
+  mapModal.style.display = 'flex';
+  addressGroup.style.display = 'block';
+  confirmBtn.style.display = 'block';
+  
+  setTimeout(() => {
+    if (!map) {
+      map = L.map('leafletMap').setView([19.0760, 72.8777], 11); // Mumbai default
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+      }).addTo(map);
+      
+      map.on('click', (e) => {
+        if (marker) map.removeLayer(marker);
+        marker = L.marker(e.latlng).addTo(map);
+      });
+    } else {
+      map.invalidateSize();
+      if (marker) map.removeLayer(marker);
+    }
+  }, 300);
+}
+
+function viewLocationOnMap(lat, lng, address) {
+  const mapModal = document.getElementById('mapModal');
+  const addressGroup = document.getElementById('addressGroup');
+  const confirmBtn = document.getElementById('confirmLocationBtn');
+  
+  mapModal.style.display = 'flex';
+  addressGroup.style.display = 'none';
+  confirmBtn.style.display = 'none';
+  
+  setTimeout(() => {
+    if (!map) {
+      map = L.map('leafletMap').setView([lat, lng], 14);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+    } else {
+      map.setView([lat, lng], 14);
+      map.invalidateSize();
+    }
+    
+    if (marker) map.removeLayer(marker);
+    marker = L.marker([lat, lng]).addTo(map)
+      .bindPopup(`<div class="map-marker-popup"><b>Pickup Point</b><br>${address || 'No address provided'}</div>`)
+      .openPopup();
+  }, 300);
+}
+
+async function submitPickupRequest(id, lat, lng, address) {
+  try {
+    const res = await fetch(`/api/request-pickup/${id}`, {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ lat, lng, address })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to request pickup');
+    
+    showToast('Success! Direct connection established with donor.', 'success');
+    document.getElementById('mapModal').style.display = 'none';
+    fetchDonations();
+    fetchUserDonations();
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
 }
 
 // ========== FILTERS ==========
@@ -500,7 +606,6 @@ function setupDonateForm() {
     foodImage.addEventListener('change', () => {
       const file = foodImage.files[0];
       if (file) {
-        // Show real image preview
         const reader = new FileReader();
         reader.onload = (e) => {
           if (imgPreview && imgPreviewWrap) {
@@ -509,11 +614,8 @@ function setupDonateForm() {
           }
         };
         reader.readAsDataURL(file);
-
-        analyzeResult.innerHTML = '<i class="fas fa-spinner fa-pulse"></i> Analyzing food...';
-        setTimeout(() => {
-          analyzeResult.innerHTML = '✅ Image ready • Safe to donate';
-        }, 1200);
+        analyzeResult.innerHTML = '<i class="fas fa-spinner fa-pulse"></i> Processing...';
+        setTimeout(() => analyzeResult.innerHTML = '✅ Ready to donate', 1000);
       }
     });
   }
@@ -536,23 +638,19 @@ function setupDonateForm() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
 
-      donateMessage.innerHTML = '🎉 You\'re doing something amazing ❤️';
+      showToast('🎉 Donation posted successfully!', 'success');
       confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
-
       donateForm.reset();
-      analyzeResult.innerHTML = '';
       if (imgPreviewWrap) imgPreviewWrap.style.display = 'none';
       submitBtn.disabled = false;
       submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Post Donation';
-      setTimeout(() => donateMessage.innerHTML = '', 3000);
-
       fetchDonations();
       fetchUserDonations();
     } catch (err) {
+      showToast(err.message, 'error');
       const submitBtn = donateForm.querySelector('button[type="submit"]');
       submitBtn.disabled = false;
       submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Post Donation';
-      donateMessage.innerHTML = 'Error: ' + err.message;
     }
   });
 }
@@ -569,13 +667,30 @@ async function fetchUserDonations() {
       donations.forEach(d => {
         const expDate = new Date(d.expiry);
         const isExpired = expDate < new Date();
+        
+        let pickedByHtml = '';
+        if (d.status === 'Picked' && d.pickedBy) {
+          pickedByHtml = `
+            <div class="picked-by-info" style="background: var(--surface2); padding: 0.8rem; margin-top: 0.5rem; border-radius: 4px;">
+              <strong><i class="fas fa-hand-holding-heart"></i> Taken by ${d.pickedBy.name} (${d.pickedBy.role})</strong>
+              <p style="font-size: 0.8rem; opacity: 0.8;"><i class="fas fa-envelope"></i> ${d.pickedBy.email}</p>
+              ${d.pickupLocation ? `
+                <a class="view-map-link" style="font-size: 0.8rem;" onclick="viewLocationOnMap(${d.pickupLocation.lat}, ${d.pickupLocation.lng}, '${d.pickupLocation.address}')">
+                  <i class="fas fa-location-dot"></i> See their location on map
+                </a>
+              ` : ''}
+            </div>
+          `;
+        }
+
         html += `
-          <div class="dashboard-card">
+          <div class="dashboard-card" style="margin-bottom: 1rem; padding: 1rem; border: 1px solid var(--border); border-radius: 0;">
             <p><strong>${sanitizeHTML(d.foodName)}</strong> (${sanitizeHTML(d.quantity)})</p>
-            <p>Status: <span class="${d.status === 'Picked' ? 'picked' : 'pending'}">${d.status}</span>
-              ${isExpired ? ' <span style="color:#ef4444; font-size:0.8rem;">(Expired)</span>' : ''}
+            <p>Status: <span class="${d.status === 'Picked' ? 'picked' : 'pending'}" style="color: ${d.status === 'Picked' ? 'var(--green)' : 'var(--accent)'}">${d.status}</span>
+              ${isExpired && d.status !== 'Picked' ? ' <span style="color:#ef4444; font-size:0.8rem;">(Expired)</span>' : ''}
             </p>
-            <p>Expires: ${expDate.toLocaleDateString('en-IN')}</p>
+            <p style="font-size: 0.85rem; opacity: 0.7;">Posted: ${new Date(d.createdAt).toLocaleDateString()}</p>
+            ${pickedByHtml}
           </div>
         `;
       });
@@ -584,12 +699,84 @@ async function fetchUserDonations() {
   } catch (err) { console.error(err); }
 }
 
+// ========== SUPPORT MODALS CONTENT ==========
+function setupSupportModals() {
+  const supportModal = document.getElementById('supportModal');
+  const closeSupport = document.getElementById('closeSupport');
+  const supportTitle = document.getElementById('supportTitle');
+  const supportContent = document.getElementById('supportContent');
+  
+  if (closeSupport) closeSupport.onclick = () => supportModal.style.display = 'none';
+  
+  const contentMap = {
+    'FAQ': {
+      title: 'Frequently Asked Questions',
+      body: `
+        <h3>How do I donate food?</h3>
+        <p>Simply create an account, click the "Donate" button, fill in the food details, and upload a photo. Your donation will appear on the live feed for NGOs to see.</p>
+        <h3>Who can pick up the food?</h3>
+        <p>Verified NGO partners and registered volunteers can request a pickup. They will share their location and contact you directly.</p>
+        <h3>Is the food checked for quality?</h3>
+        <p>Donors are responsible for ensuring the food is fresh. We track expiry dates and highlight "Urgent" items that need immediate pickup.</p>
+      `
+    },
+    'Volunteer': {
+      title: 'Join as a Volunteer',
+      body: `
+        <h3>How can I help?</h3>
+        <p>Volunteers help by picking up food from donors and delivering it to nearby shelters or NGOs. You can sign up as a "Volunteer" to get started.</p>
+        <h3>What are the requirements?</h3>
+        <ul>
+          <li>A valid ID for verification</li>
+          <li>Access to a vehicle (bike, car, or even public transport)</li>
+          <li>A few hours of commitment per week</li>
+        </ul>
+      `
+    },
+    'NGO Partners': {
+      title: 'Our NGO Network',
+      body: `
+        <h3>Partnering with KindPlate</h3>
+        <p>We work with over 50+ local NGOs to ensure that no meal goes to waste. Our partners include homeless shelters, community kitchens, and orphanages.</p>
+        <h3>Register your NGO</h3>
+        <p>If you represent an NGO, sign up with the "NGO" role to gain access to bulk donation requests and priority alerts.</p>
+      `
+    },
+    'Privacy Policy': {
+      title: 'Privacy Policy',
+      body: `
+        <p>We take your privacy seriously. KindPlate only shares your contact information with the specific NGO or Volunteer who has been assigned to your pickup.</p>
+        <p>Your location is only used to coordinate the food handover and is not sold to any third parties.</p>
+      `
+    },
+    'Terms of Use': {
+      title: 'Terms of Use',
+      body: `
+        <p>By using KindPlate, you agree to provide accurate information about food quality and quantity. Donors are responsible for the safety of the food provided.</p>
+        <p>KindPlate is a platform for connection and is not liable for any issues arising during the physical handover of food.</p>
+      `
+    }
+  };
+  
+  document.querySelectorAll('.footer-links a, .footer-placeholder').forEach(link => {
+    const text = link.textContent.trim();
+    if (contentMap[text]) {
+      link.addEventListener('click', (e) => {
+        e.preventDefault();
+        supportTitle.textContent = contentMap[text].title;
+        supportContent.innerHTML = contentMap[text].body;
+        supportModal.style.display = 'flex';
+      });
+    }
+  });
+}
+
 // ========== CHATBOT (FLOATING) ==========
 function setupChatbot() {
+  if (!chatBtn) return;
   chatBtn.addEventListener('click', () => {
     chatWindow.classList.toggle('open');
     if (chatWindow.classList.contains('open')) {
-      // Scroll to bottom and focus input when opened
       setTimeout(() => {
         chatMsgs.scrollTop = chatMsgs.scrollHeight;
         chatInput.focus();
@@ -605,7 +792,6 @@ function setupChatbot() {
     msgDiv.classList.add('msg', sender === 'user' ? 'user-msg' : 'bot-msg');
     msgDiv.innerText = text;
     chatMsgs.appendChild(msgDiv);
-    // Always scroll to newest message
     chatMsgs.scrollTop = chatMsgs.scrollHeight;
   }
 
@@ -633,8 +819,6 @@ function setupChatbot() {
 
   sendMsg.addEventListener('click', sendMessage);
   chatInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendMessage(); });
-
-  // Keep chat input visible when focused (scroll chat body, not page)
   chatInput.addEventListener('focus', () => {
     setTimeout(() => { chatMsgs.scrollTop = chatMsgs.scrollHeight; }, 150);
   });

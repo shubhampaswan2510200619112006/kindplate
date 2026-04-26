@@ -53,6 +53,7 @@ const userSchema = new mongoose.Schema({
   name: { type: String, required: true },
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
+  role: { type: String, enum: ['Donor', 'NGO', 'Volunteer'], default: 'Donor' },
 }, { timestamps: true });
 
 const donationSchema = new mongoose.Schema({
@@ -64,6 +65,8 @@ const donationSchema = new mongoose.Schema({
   image: { type: String, default: '' },
   tag: { type: String, enum: ['Fresh', 'Urgent'], default: 'Fresh' },
   status: { type: String, enum: ['Pending', 'Picked'], default: 'Pending' },
+  pickedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  pickupLocation: { lat: Number, lng: Number, address: String },
   createdAt: { type: Date, default: Date.now }
 });
 
@@ -107,18 +110,19 @@ const auth = async (req, res, next) => {
 // Signup
 app.post('/api/signup', async (req, res) => {
   try {
-    const { name, email, password } = req.body;
+    const { name, email, password, role } = req.body;
     if (!name || !email || !password) return res.status(400).json({ error: 'All fields required' });
 
     const existing = await User.findOne({ email });
     if (existing) return res.status(400).json({ error: 'Email already exists' });
 
     const hashed = await bcrypt.hash(password, 10);
-    const user = new User({ name, email, password: hashed });
+    const userRole = role || 'Donor';
+    const user = new User({ name, email, password: hashed, role: userRole });
     await user.save();
 
     const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '7d' });
-    res.json({ token, user: { id: user._id, name: user.name, email: user.email } });
+    res.json({ token, user: { id: user._id, name: user.name, email: user.email, role: user.role } });
   } catch (err) {
     res.status(500).json({ error: 'Server error' });
   }
@@ -135,7 +139,7 @@ app.post('/api/login', authLimiter, async (req, res) => {
     if (!match) return res.status(400).json({ error: 'Invalid credentials' });
 
     const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '7d' });
-    res.json({ token, user: { id: user._id, name: user.name, email: user.email } });
+    res.json({ token, user: { id: user._id, name: user.name, email: user.email, role: user.role } });
   } catch (err) {
     res.status(500).json({ error: 'Server error' });
   }
@@ -143,7 +147,7 @@ app.post('/api/login', authLimiter, async (req, res) => {
 
 // Get current user
 app.get('/api/user', auth, (req, res) => {
-  res.json({ user: { id: req.user._id, name: req.user.name, email: req.user.email } });
+  res.json({ user: { id: req.user._id, name: req.user.name, email: req.user.email, role: req.user.role } });
 });
 
 // Create donation
@@ -190,7 +194,7 @@ app.post('/api/donate', auth, upload.single('image'), async (req, res) => {
 // Get all donations (tags recalculated dynamically on every fetch)
 app.get('/api/donations', async (req, res) => {
   try {
-    const donations = await Donation.find().populate('user', 'name').sort({ createdAt: -1 });
+    const donations = await Donation.find().populate('user', 'name').populate('pickedBy', 'name email role').sort({ createdAt: -1 });
     const now = new Date();
     const updated = donations.map(d => {
       const obj = d.toObject();
@@ -214,21 +218,29 @@ app.get('/api/donations', async (req, res) => {
 // Get user's donations
 app.get('/api/my-donations', auth, async (req, res) => {
   try {
-    const donations = await Donation.find({ user: req.user._id }).sort({ createdAt: -1 });
+    const donations = await Donation.find({ user: req.user._id }).populate('pickedBy', 'name email role').sort({ createdAt: -1 });
     res.json(donations);
   } catch (err) {
     res.status(500).json({ error: 'Server error' });
   }
 });
 
-// Request pickup (update status)
+// Request pickup (update status and location)
 app.post('/api/request-pickup/:id', authLimiter, auth, async (req, res) => {
   try {
+    const { lat, lng, address } = req.body;
     const donation = await Donation.findById(req.params.id);
     if (!donation) return res.status(404).json({ error: 'Not found' });
+    if (donation.status === 'Picked') return res.status(400).json({ error: 'Already picked up' });
+    
     donation.status = 'Picked';
+    donation.pickedBy = req.user._id;
+    if (lat && lng) {
+      donation.pickupLocation = { lat, lng, address: address || 'Location shared' };
+    }
+    
     await donation.save();
-    res.json({ message: 'Pickup requested' });
+    res.json({ message: 'Pickup requested successfully' });
   } catch (err) {
     res.status(500).json({ error: 'Server error' });
   }

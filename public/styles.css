@@ -2756,4 +2756,67 @@ body.dark .user-logged-btn {
 }
 
 /* ── Accent variable alias for image preview border ── */
-:root { --accent: var(--green); }
+/* ═══════════════════════════════════════════════════════════
+   NEW: Maps & Support Modals
+   ═══════════════════════════════════════════════════════════ */
+#leafletMap {
+  border: 1px solid var(--border);
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.map-marker-popup {
+  font-family: var(--font-body);
+  color: var(--black);
+}
+
+#supportContent h3 {
+  color: var(--green);
+  margin: 1.5rem 0 0.5rem;
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+}
+
+#supportContent p {
+  margin-bottom: 1rem;
+}
+
+#supportContent ul {
+  padding-left: 1.2rem;
+  margin-bottom: 1rem;
+}
+
+#supportContent li {
+  margin-bottom: 0.4rem;
+}
+
+/* Dashboard enhancements */
+.picked-by-info {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px dashed var(--border);
+  font-size: 0.85rem;
+}
+
+.picked-by-info strong {
+  color: var(--green-dark);
+  display: block;
+  margin-bottom: 0.2rem;
+}
+
+.view-map-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--green);
+  text-decoration: none;
+  font-weight: 500;
+  margin-top: 0.5rem;
+  cursor: pointer;
+}
+
+.view-map-link:hover {
+  text-decoration: underline;
+}
+
+:root { --accent: var(--green); }
+
