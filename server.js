@@ -155,13 +155,6 @@ app.post('/api/login', authLimiter, async (req, res) => {
   }
 });
 
-// Get configuration variables (e.g. Google Maps API Key)
-app.get('/api/config', (req, res) => {
-  res.json({
-    googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY || ''
-  });
-});
-
 // Get current user
 app.get('/api/user', auth, (req, res) => {
   res.json({ user: { id: req.user._id, name: req.user.name, email: req.user.email, role: req.user.role } });
