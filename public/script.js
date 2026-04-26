@@ -145,6 +145,7 @@ document.addEventListener('DOMContentLoaded', () => {
   setupFooterPlaceholders();
   setupSupportModals();
   setupMaps();
+  setupFeedback();
 });
 
 // ========== HAMBURGER MENU ==========
@@ -705,6 +706,9 @@ async function fetchUserDonations() {
                   <i class="fas fa-location-dot"></i> See their location on map
                 </a>
               ` : ''}
+              <button class="btn btn-secondary" style="margin-top: 0.8rem; padding: 0.4rem 0.8rem; font-size: 0.8rem;" onclick="openFeedbackModal('${d._id}')">
+                <i class="fas fa-star"></i> Leave Feedback
+              </button>
             </div>
           `;
         }
@@ -795,6 +799,70 @@ function setupSupportModals() {
       });
     }
   });
+}
+
+// ========== FEEDBACK SYSTEM ==========
+function setupFeedback() {
+  const stars = document.querySelectorAll('.star-rating i');
+  const ratingInput = document.getElementById('feedbackRating');
+  const feedbackForm = document.getElementById('feedbackForm');
+  const closeFeedback = document.getElementById('closeFeedback');
+  const feedbackModal = document.getElementById('feedbackModal');
+
+  if (closeFeedback) closeFeedback.onclick = () => feedbackModal.style.display = 'none';
+
+  stars.forEach(star => {
+    star.onclick = () => {
+      const val = star.dataset.value;
+      ratingInput.value = val;
+      stars.forEach(s => {
+        if (s.dataset.value <= val) {
+          s.classList.remove('far');
+          s.classList.add('fas');
+          s.style.color = 'gold';
+        } else {
+          s.classList.remove('fas');
+          s.classList.add('far');
+          s.style.color = 'var(--text-muted)';
+        }
+      });
+    };
+  });
+
+  if (feedbackForm) {
+    feedbackForm.onsubmit = async (e) => {
+      e.preventDefault();
+      const donationId = document.getElementById('feedbackDonationId').value;
+      const rating = ratingInput.value;
+      const comment = document.getElementById('feedbackComment').value;
+
+      try {
+        const res = await fetch('/api/feedback', {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ donationId, rating, comment })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+
+        showToast('Thank you for your feedback! ❤️', 'success');
+        feedbackModal.style.display = 'none';
+        feedbackForm.reset();
+        // Reset stars
+        stars.forEach(s => { s.classList.add('far'); s.style.color = 'var(--text-muted)'; });
+      } catch (err) {
+        showToast(err.message, 'error');
+      }
+    };
+  }
+}
+
+function openFeedbackModal(donationId) {
+  document.getElementById('feedbackDonationId').value = donationId;
+  document.getElementById('feedbackModal').style.display = 'flex';
 }
 
 // ========== CHATBOT (FLOATING) ==========

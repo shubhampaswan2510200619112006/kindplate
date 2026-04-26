@@ -70,8 +70,18 @@ const donationSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 });
 
+const reviewSchema = new mongoose.Schema({
+  donation: { type: mongoose.Schema.Types.ObjectId, ref: 'Donation', required: true },
+  fromUser: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  toUser: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  rating: { type: Number, min: 1, max: 5, required: true },
+  comment: { type: String, required: true },
+  createdAt: { type: Date, default: Date.now }
+});
+
 const User = mongoose.model('User', userSchema);
 const Donation = mongoose.model('Donation', donationSchema);
+const Review = mongoose.model('Review', reviewSchema);
 
 // ========== MULTER — Memory Storage ==========
 // Images are stored as base64 data URLs in MongoDB.
@@ -241,6 +251,37 @@ app.post('/api/request-pickup/:id', authLimiter, auth, async (req, res) => {
     
     await donation.save();
     res.json({ message: 'Pickup requested successfully' });
+  } catch (err) {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Feedback Routes
+app.post('/api/feedback', authLimiter, auth, async (req, res) => {
+  try {
+    const { donationId, rating, comment } = req.body;
+    const donation = await Donation.findById(donationId);
+    if (!donation) return res.status(404).json({ error: 'Donation not found' });
+    if (donation.status !== 'Picked') return res.status(400).json({ error: 'Cannot review pending donations' });
+    
+    const review = new Review({
+      donation: donationId,
+      fromUser: req.user._id,
+      toUser: donation.pickedBy,
+      rating,
+      comment
+    });
+    await review.save();
+    res.json({ message: 'Feedback submitted! Thank you.' });
+  } catch (err) {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+app.get('/api/reviews', async (req, res) => {
+  try {
+    const reviews = await Review.find().populate('fromUser', 'name').sort({ createdAt: -1 }).limit(10);
+    res.json(reviews);
   } catch (err) {
     res.status(500).json({ error: 'Server error' });
   }
