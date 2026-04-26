@@ -319,9 +319,6 @@ async function fetchUser() {
 // ========== PLACEHOLDER IMAGE ==========
 const PLACEHOLDER_IMG = 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&q=80';
 
-// ========== PLACEHOLDER IMAGE ==========
-const PLACEHOLDER_IMG = 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&q=80';
-
 function imgTag(src, alt) {
   const safeSrc = sanitizeHTML(src) || PLACEHOLDER_IMG;
   return `<img
