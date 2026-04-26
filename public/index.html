@@ -37,6 +37,13 @@
       <a href="#feed" class="nav-link">Find Food</a>
       <a href="#contact" class="nav-link">Contact</a>
       <button class="login-btn" id="loginBtn"><i class="fas fa-user"></i> Login</button>
+      <div class="user-menu-wrap" id="userMenuWrap" style="display:none; position:relative;">
+        <button class="login-btn user-logged-btn" id="userBtn"><i class="fas fa-user-circle"></i> <span id="userBtnName"></span> <i class="fas fa-chevron-down" style="font-size:0.7rem"></i></button>
+        <div class="user-dropdown" id="userDropdown">
+          <a href="#dashboard" class="dropdown-item" id="myDonationsLink"><i class="fas fa-list"></i> My Donations</a>
+          <button class="dropdown-item logout-item" id="logoutBtn"><i class="fas fa-sign-out-alt"></i> Logout</button>
+        </div>
+      </div>
     </div>
   </nav>
   <div class="nav-backdrop" id="navBackdrop"></div>
@@ -130,6 +137,7 @@
       <button class="filter-btn active" data-filter="all"><i class="fas fa-border-all"></i> All</button>
       <button class="filter-btn" data-filter="Fresh"><i class="fas fa-leaf"></i> Fresh</button>
       <button class="filter-btn" data-filter="Urgent"><i class="fas fa-fire"></i> Urgent</button>
+      <button class="filter-btn expired-filter-btn" data-filter="Expired"><i class="fas fa-ban"></i> Expired</button>
       <div class="search-box">
         <i class="fas fa-search"></i>
         <input type="text" id="searchInput" placeholder="Search food...">
@@ -169,11 +177,14 @@
           <div class="form-row">
             <div class="form-group">
               <label><i class="fas fa-clock"></i> Expiry date/time</label>
-              <input type="datetime-local" name="expiry" required>
+              <input type="datetime-local" name="expiry" id="expiryInput" required>
             </div>
             <div class="form-group">
-              <label><i class="fas fa-image"></i> Food image</label>
-              <input type="file" name="image" accept="image/*" required id="foodImage" class="file-input">
+              <label><i class="fas fa-image"></i> Food image <span style="font-size:0.75rem; opacity:0.6;">(optional)</span></label>
+              <input type="file" name="image" accept="image/*" id="foodImage" class="file-input">
+              <div id="imgPreviewWrap" style="display:none; margin-top:8px;">
+                <img id="imgPreview" src="" alt="Preview" style="width:100%; max-height:140px; object-fit:cover; border-radius:10px; border:2px solid var(--accent);">
+              </div>
             </div>
           </div>
           <div id="analyzeResult" class="analyze-result"></div>
@@ -268,7 +279,7 @@
       </div>
       <div class="story-image">
         <div class="story-img-wrap">
-          <img src="/images/food1.jpg" alt="Happy family receiving food"
+          <img src="./images/food1.jpg" alt="Happy family receiving food"
             onerror="this.src='https://images.unsplash.com/photo-1593113598332-cd288d649433?w=600&q=80'">
 
         </div>
@@ -338,9 +349,9 @@
           <div class="cdetail"><i class="fas fa-location-dot"></i><span>Mumbai, India</span></div>
         </div>
         <div class="social-links">
-          <a href="#" class="social-btn"><i class="fab fa-instagram"></i></a>
-          <a href="#" class="social-btn"><i class="fab fa-twitter"></i></a>
-          <a href="#" class="social-btn"><i class="fab fa-linkedin"></i></a>
+          <a href="javascript:void(0)" class="social-btn footer-placeholder"><i class="fab fa-instagram"></i></a>
+          <a href="javascript:void(0)" class="social-btn footer-placeholder"><i class="fab fa-twitter"></i></a>
+          <a href="javascript:void(0)" class="social-btn footer-placeholder"><i class="fab fa-linkedin"></i></a>
         </div>
       </div>
       <div class="contact-card">
@@ -380,10 +391,10 @@
               class="logo-accent">Plate</span></span></div>
         <p>Connecting hearts through food. Every meal shared is a life touched.</p>
         <div class="social-links">
-          <a href="#" class="social-btn"><i class="fab fa-instagram"></i></a>
-          <a href="#" class="social-btn"><i class="fab fa-twitter"></i></a>
-          <a href="#" class="social-btn"><i class="fab fa-linkedin"></i></a>
-          <a href="#" class="social-btn"><i class="fab fa-youtube"></i></a>
+          <a href="javascript:void(0)" class="social-btn footer-placeholder"><i class="fab fa-instagram"></i></a>
+          <a href="javascript:void(0)" class="social-btn footer-placeholder"><i class="fab fa-twitter"></i></a>
+          <a href="javascript:void(0)" class="social-btn footer-placeholder"><i class="fab fa-linkedin"></i></a>
+          <a href="javascript:void(0)" class="social-btn footer-placeholder"><i class="fab fa-youtube"></i></a>
         </div>
       </div>
       <div class="footer-links">
@@ -396,11 +407,11 @@
       </div>
       <div class="footer-links">
         <h4>Support</h4>
-        <a href="#">FAQ</a>
-        <a href="#">Volunteer</a>
-        <a href="#">NGO Partners</a>
-        <a href="#">Privacy Policy</a>
-        <a href="#">Terms of Use</a>
+        <a href="javascript:void(0)" class="footer-placeholder">FAQ</a>
+        <a href="javascript:void(0)" class="footer-placeholder">Volunteer</a>
+        <a href="javascript:void(0)" class="footer-placeholder">NGO Partners</a>
+        <a href="javascript:void(0)" class="footer-placeholder">Privacy Policy</a>
+        <a href="javascript:void(0)" class="footer-placeholder">Terms of Use</a>
       </div>
       <div class="footer-newsletter">
         <h4>Stay Updated</h4>

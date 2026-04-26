@@ -1,4 +1,4 @@
-// === script.js – complete frontend with enhanced AI and animations ===
+// === script.js – complete frontend with all bug fixes ===
 
 let currentUser = null;
 let token = localStorage.getItem('token');
@@ -21,9 +21,8 @@ function showToast(message, type = 'success') {
   }
   const toast = document.createElement('div');
   toast.className = `toast toast-${type}`;
-  toast.innerHTML = `<i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'}"></i> <span>${sanitizeHTML(message)}</span>`;
+  toast.innerHTML = `<i class="fas ${type === 'success' ? 'fa-check-circle' : type === 'info' ? 'fa-info-circle' : 'fa-exclamation-circle'}"></i> <span>${sanitizeHTML(message)}</span>`;
   toastContainer.appendChild(toast);
-  
   setTimeout(() => toast.classList.add('show'), 10);
   setTimeout(() => {
     toast.classList.remove('show');
@@ -81,6 +80,13 @@ const foodImage = document.getElementById('foodImage');
 const analyzeResult = document.getElementById('analyzeResult');
 const dashboardContent = document.getElementById('dashboardContent');
 
+// User dropdown elements
+const userMenuWrap = document.getElementById('userMenuWrap');
+const userBtn = document.getElementById('userBtn');
+const userBtnName = document.getElementById('userBtnName');
+const userDropdown = document.getElementById('userDropdown');
+const logoutBtn = document.getElementById('logoutBtn');
+
 // Slideshow
 let slideIndex = 0;
 const slides = document.querySelectorAll('.slide');
@@ -94,11 +100,19 @@ function showSlides() {
   setTimeout(showSlides, 4000);
 }
 
-// Initialize
+// ========== INITIALIZE ==========
 document.addEventListener('DOMContentLoaded', () => {
   if (localStorage.getItem('darkMode') === 'true') {
     body.classList.add('dark');
     themeToggle.innerHTML = '<i class="fas fa-sun"></i>';
+  }
+
+  // Set minimum datetime on expiry input to now (prevent past dates)
+  const expiryInput = document.getElementById('expiryInput');
+  if (expiryInput) {
+    const now = new Date();
+    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+    expiryInput.min = now.toISOString().slice(0, 16);
   }
 
   if (token) fetchUser();
@@ -117,12 +131,10 @@ document.addEventListener('DOMContentLoaded', () => {
   }, { threshold: 0.1 });
   document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
 
-
-
-  // Start slideshow
   if (slides.length) showSlides();
 
   setupAuth();
+  setupUserDropdown();
   setupChatbot();
   setupJarvisSection();
   setupFilters();
@@ -130,6 +142,7 @@ document.addEventListener('DOMContentLoaded', () => {
   setupHeroButtons();
   setupContactForm();
   setupHamburger();
+  setupFooterPlaceholders();
 });
 
 // ========== HAMBURGER MENU ==========
@@ -158,34 +171,79 @@ function setupHamburger() {
   hamburger.addEventListener('click', () => {
     hamburger.classList.contains('open') ? closeMenu() : openMenu();
   });
-
-  // Close on backdrop click
   backdrop.addEventListener('click', closeMenu);
-
-  // Close when a nav link is tapped
   navLinks.querySelectorAll('a.nav-link').forEach(link => {
     link.addEventListener('click', closeMenu);
   });
-
-  // Close on Escape key
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') closeMenu();
   });
 }
 
-// ========== AUTH (same as before) ==========
-function setupAuth() {
-  loginBtn.addEventListener('click', () => {
-    modal.style.display = 'flex';
-    modalTitle.textContent = 'Login';
-    nameField.style.display = 'none';
-    authSubmit.textContent = 'Login';
-    toggleAuth.innerHTML = `Don't have an account? <a href="#" id="switchToSignup">Sign up</a>`;
-    document.getElementById('switchToSignup').addEventListener('click', (e) => {
+// ========== FOOTER PLACEHOLDERS (prevent scroll-to-top) ==========
+function setupFooterPlaceholders() {
+  document.querySelectorAll('.footer-placeholder').forEach(el => {
+    el.addEventListener('click', (e) => {
       e.preventDefault();
-      showSignup();
+      showToast('🚧 Coming soon! This feature is under development.', 'info');
     });
   });
+}
+
+// ========== USER DROPDOWN ==========
+function setupUserDropdown() {
+  if (!userBtn || !userDropdown) return;
+
+  userBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    userDropdown.classList.toggle('open');
+  });
+
+  // Close dropdown when clicking outside
+  document.addEventListener('click', (e) => {
+    if (!userMenuWrap?.contains(e.target)) {
+      userDropdown?.classList.remove('open');
+    }
+  });
+
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', () => {
+      token = null;
+      currentUser = null;
+      localStorage.removeItem('token');
+      // Show login btn, hide user menu
+      if (loginBtn) loginBtn.style.display = '';
+      if (userMenuWrap) userMenuWrap.style.display = 'none';
+      if (dashboardContent) dashboardContent.innerHTML = '';
+      if (userDropdown) userDropdown.classList.remove('open');
+      showToast('Logged out successfully', 'success');
+      fetchDonations();
+    });
+  }
+}
+
+// ========== SHOW LOGGED IN STATE ==========
+function showLoggedInState(name) {
+  if (loginBtn) loginBtn.style.display = 'none';
+  if (userMenuWrap) userMenuWrap.style.display = 'flex';
+  if (userBtnName) userBtnName.textContent = name.split(' ')[0];
+}
+
+// ========== AUTH ==========
+function setupAuth() {
+  if (loginBtn) {
+    loginBtn.addEventListener('click', () => {
+      modal.style.display = 'flex';
+      modalTitle.textContent = 'Login';
+      nameField.style.display = 'none';
+      authSubmit.textContent = 'Login';
+      toggleAuth.innerHTML = `Don't have an account? <a href="#" id="switchToSignup">Sign up</a>`;
+      document.getElementById('switchToSignup').addEventListener('click', (e) => {
+        e.preventDefault();
+        showSignup();
+      });
+    });
+  }
 
   closeModal.addEventListener('click', () => modal.style.display = 'none');
   window.addEventListener('click', (e) => { if (e.target === modal) modal.style.display = 'none'; });
@@ -198,13 +256,13 @@ function setupAuth() {
     const name = formData.get('name');
     const isLogin = modalTitle.textContent === 'Login';
     const url = isLogin ? '/api/login' : '/api/signup';
-    const body = isLogin ? { email, password } : { name, email, password };
+    const bodyData = isLogin ? { email, password } : { name, email, password };
 
     try {
       const res = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
+        body: JSON.stringify(bodyData)
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Something went wrong');
@@ -212,10 +270,11 @@ function setupAuth() {
       token = data.token;
       currentUser = data.user;
       localStorage.setItem('token', token);
-      loginBtn.textContent = currentUser.name.split(' ')[0];
+      showLoggedInState(currentUser.name);
       modal.style.display = 'none';
       authForm.reset();
       authMessage.textContent = '';
+      showToast(`Welcome back, ${currentUser.name.split(' ')[0]}! 🎉`, 'success');
       fetchUserDonations();
     } catch (err) {
       authMessage.textContent = err.message;
@@ -234,8 +293,8 @@ function showSignup() {
     nameField.style.display = 'none';
     authSubmit.textContent = 'Login';
     toggleAuth.innerHTML = `Don't have an account? <a href="#" id="switchToSignup">Sign up</a>`;
-    document.getElementById('switchToSignup').addEventListener('click', (e) => {
-      e.preventDefault();
+    document.getElementById('switchToSignup').addEventListener('click', (e2) => {
+      e2.preventDefault();
       showSignup();
     });
   });
@@ -247,11 +306,26 @@ async function fetchUser() {
     if (!res.ok) throw new Error();
     const data = await res.json();
     currentUser = data.user;
-    loginBtn.textContent = currentUser.name.split(' ')[0];
+    showLoggedInState(currentUser.name);
     fetchUserDonations();
   } catch (err) {
     localStorage.removeItem('token');
+    token = null;
   }
+}
+
+// ========== PLACEHOLDER IMAGE ==========
+const PLACEHOLDER_IMG = 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&q=80';
+
+function imgTag(src, alt) {
+  const safeSrc = sanitizeHTML(src) || PLACEHOLDER_IMG;
+  return `<img
+    src="${safeSrc}"
+    alt="${sanitizeHTML(alt)}"
+    class="card-img"
+    loading="lazy"
+    onerror="this.onerror=null; this.src='${PLACEHOLDER_IMG}';"
+  >`;
 }
 
 // ========== DONATIONS ==========
@@ -261,7 +335,8 @@ async function fetchDonations() {
     const res = await fetch('/api/donations');
     const donations = await res.json();
     allDonations = donations;
-    renderDonations('all', '');
+    const activeFilter = document.querySelector('.filter-btn.active')?.dataset.filter || 'all';
+    renderDonations(activeFilter, searchInput?.value || '');
     renderFindDonations();
   } catch (err) {
     console.error('Failed to load donations');
@@ -271,31 +346,61 @@ async function fetchDonations() {
 function showSkeletons() {
   let skeletons = '';
   for (let i = 0; i < 6; i++) skeletons += '<div class="skeleton"></div>';
-  foodGrid.innerHTML = skeletons;
+  if (foodGrid) foodGrid.innerHTML = skeletons;
   if (findGrid) findGrid.innerHTML = skeletons;
 }
 
 function renderDonations(filter = 'all', search = '') {
+  if (!foodGrid) return;
   let filtered = allDonations;
-  if (filter !== 'all') filtered = filtered.filter(d => d.tag === filter);
-  if (search) filtered = filtered.filter(d => d.foodName.toLowerCase().includes(search.toLowerCase()));
+
+  // When filtering by Fresh or Urgent, exclude expired items
+  if (filter === 'Fresh') {
+    filtered = filtered.filter(d => d.tag === 'Fresh');
+  } else if (filter === 'Urgent') {
+    filtered = filtered.filter(d => d.tag === 'Urgent');
+  } else if (filter === 'Expired') {
+    filtered = filtered.filter(d => d.tag === 'Expired');
+  } else {
+    // 'all' — show everything
+  }
+
+  if (search) {
+    filtered = filtered.filter(d => d.foodName.toLowerCase().includes(search.toLowerCase()));
+  }
+
   if (filtered.length === 0) {
-    foodGrid.innerHTML = '<p style="text-align:center; grid-column:1/-1;">No donations yet. Be the first to donate!</p>';
+    const emptyMsg = {
+      Fresh: 'No fresh meals available right now.',
+      Urgent: 'No urgent items at the moment.',
+      Expired: 'No expired food — everything is fresh! ✅',
+      all: 'No donations yet. Be the first to donate!'
+    };
+    foodGrid.innerHTML = `<p class="empty-state" style="grid-column:1/-1; text-align:center; color:var(--text-muted); padding:2rem;">${emptyMsg[filter] || emptyMsg.all}</p>`;
     return;
   }
 
   let html = '';
   filtered.forEach(d => {
-    const expiryDate = new Date(d.expiry).toLocaleString();
+    const expiryDate = new Date(d.expiry).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' });
+    const isExpired = d.tag === 'Expired';
     html += `
-      <div class="card reveal">
-        <img src="${sanitizeHTML(d.image) || '/images/placeholder.jpg'}" alt="${sanitizeHTML(d.foodName)}" class="card-img" loading="lazy">
+      <div class="card reveal ${isExpired ? 'expired-card' : ''}">
+        ${imgTag(d.image, d.foodName)}
         <div class="card-content">
-          <span class="card-tag">${sanitizeHTML(d.tag)}</span>
+          <span class="card-tag tag-${d.tag.toLowerCase()}">${sanitizeHTML(d.tag)}</span>
           <h3>${sanitizeHTML(d.foodName)}</h3>
-          <div class="card-meta"><span><i class="fas fa-utensils"></i> ${sanitizeHTML(d.quantity)}</span> <span><i class="fas fa-location-dot"></i> ${sanitizeHTML(d.location)}</span></div>
-          <p style="font-size:0.85rem; color:#6B7280;">Expires: ${expiryDate}</p>
-          <button class="request-btn" data-id="${d._id}">Request Pickup</button>
+          <div class="card-meta">
+            <span><i class="fas fa-utensils"></i> ${sanitizeHTML(d.quantity)}</span>
+            <span><i class="fas fa-location-dot"></i> ${sanitizeHTML(d.location)}</span>
+          </div>
+          <p style="font-size:0.82rem; color:var(--text-muted); margin-top:4px;">
+            <i class="fas fa-clock"></i> ${isExpired ? '<span style="color:#ef4444">Expired:</span>' : 'Expires:'} ${expiryDate}
+          </p>
+          ${isExpired
+            ? `<button class="request-btn" disabled style="opacity:0.45; cursor:not-allowed;"><i class="fas fa-ban"></i> Expired</button>`
+            : `<button class="request-btn" data-id="${d._id}"><i class="fas fa-hand-holding-heart"></i> Request Pickup</button>`
+          }
         </div>
       </div>
     `;
@@ -307,17 +412,27 @@ function renderDonations(filter = 'all', search = '') {
 
 function renderFindDonations() {
   if (!findGrid) return;
+  // Show only non-expired in Find Food section
+  const active = allDonations.filter(d => d.tag !== 'Expired');
+  if (active.length === 0) {
+    findGrid.innerHTML = '<p class="empty-state" style="grid-column:1/-1; text-align:center; color:var(--text-muted); padding:2rem;">No active food donations at the moment.</p>';
+    return;
+  }
   let html = '';
-  allDonations.forEach(d => {
-    const expiryDate = new Date(d.expiry).toLocaleString();
+  active.forEach(d => {
+    const expiryDate = new Date(d.expiry).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' });
     html += `
       <div class="card reveal">
-        <img src="${sanitizeHTML(d.image) || '/images/placeholder.jpg'}" alt="${sanitizeHTML(d.foodName)}" class="card-img" loading="lazy">
+        ${imgTag(d.image, d.foodName)}
         <div class="card-content">
-          <span class="card-tag">${sanitizeHTML(d.tag)}</span>
+          <span class="card-tag tag-${d.tag.toLowerCase()}">${sanitizeHTML(d.tag)}</span>
           <h3>${sanitizeHTML(d.foodName)}</h3>
-          <div class="card-meta"><span><i class="fas fa-utensils"></i> ${sanitizeHTML(d.quantity)}</span> <span><i class="fas fa-location-dot"></i> ${sanitizeHTML(d.location)}</span></div>
-          <button class="request-btn" data-id="${d._id}">Request Pickup</button>
+          <div class="card-meta">
+            <span><i class="fas fa-utensils"></i> ${sanitizeHTML(d.quantity)}</span>
+            <span><i class="fas fa-location-dot"></i> ${sanitizeHTML(d.location)}</span>
+          </div>
+          <p style="font-size:0.82rem; color:var(--text-muted); margin-top:4px;"><i class="fas fa-clock"></i> Expires: ${expiryDate}</p>
+          <button class="request-btn" data-id="${d._id}"><i class="fas fa-hand-holding-heart"></i> Request Pickup</button>
         </div>
       </div>
     `;
@@ -328,18 +443,23 @@ function renderFindDonations() {
 }
 
 function attachRequestButtons() {
-  document.querySelectorAll('.request-btn').forEach(btn => {
-    btn.addEventListener('click', async (e) => {
+  document.querySelectorAll('.request-btn:not([disabled])').forEach(btn => {
+    btn.addEventListener('click', async () => {
       if (!currentUser) { showToast('Please login to request pickup', 'error'); return; }
       const id = btn.dataset.id;
       try {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Requesting...';
         const res = await fetch(`/api/request-pickup/${id}`, {
           method: 'POST',
           headers: { 'Authorization': `Bearer ${token}` }
         });
         if (!res.ok) throw new Error();
+        btn.innerHTML = '<i class="fas fa-check"></i> Requested!';
         showToast('Pickup requested! The donor will be notified.', 'success');
       } catch (err) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-hand-holding-heart"></i> Request Pickup';
         showToast('Failed to request pickup', 'error');
       }
     });
@@ -365,7 +485,7 @@ function setupFilters() {
 
   if (searchInput) {
     searchInput.addEventListener('input', () => {
-      const activeFilter = document.querySelector('.filter-btn.active').dataset.filter;
+      const activeFilter = document.querySelector('.filter-btn.active')?.dataset.filter || 'all';
       renderDonations(activeFilter, searchInput.value);
     });
   }
@@ -373,14 +493,27 @@ function setupFilters() {
 
 // ========== DONATE FORM ==========
 function setupDonateForm() {
+  const imgPreview = document.getElementById('imgPreview');
+  const imgPreviewWrap = document.getElementById('imgPreviewWrap');
+
   if (foodImage) {
     foodImage.addEventListener('change', () => {
       const file = foodImage.files[0];
       if (file) {
+        // Show real image preview
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          if (imgPreview && imgPreviewWrap) {
+            imgPreview.src = e.target.result;
+            imgPreviewWrap.style.display = 'block';
+          }
+        };
+        reader.readAsDataURL(file);
+
         analyzeResult.innerHTML = '<i class="fas fa-spinner fa-pulse"></i> Analyzing food...';
         setTimeout(() => {
-          analyzeResult.innerHTML = '✅ Detected: Fresh Meal • Serves 3 • Safe to donate';
-        }, 1500);
+          analyzeResult.innerHTML = '✅ Image ready • Safe to donate';
+        }, 1200);
       }
     });
   }
@@ -391,6 +524,10 @@ function setupDonateForm() {
 
     const formData = new FormData(donateForm);
     try {
+      const submitBtn = donateForm.querySelector('button[type="submit"]');
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Posting...';
+
       const res = await fetch('/api/donate', {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` },
@@ -399,16 +536,22 @@ function setupDonateForm() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
 
-      donateMessage.innerHTML = '🎉 You’re doing something amazing ❤️';
+      donateMessage.innerHTML = '🎉 You\'re doing something amazing ❤️';
       confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
 
       donateForm.reset();
       analyzeResult.innerHTML = '';
+      if (imgPreviewWrap) imgPreviewWrap.style.display = 'none';
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Post Donation';
       setTimeout(() => donateMessage.innerHTML = '', 3000);
 
       fetchDonations();
       fetchUserDonations();
     } catch (err) {
+      const submitBtn = donateForm.querySelector('button[type="submit"]');
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Post Donation';
       donateMessage.innerHTML = 'Error: ' + err.message;
     }
   });
@@ -424,11 +567,15 @@ async function fetchUserDonations() {
     if (donations.length === 0) html += '<p>No donations yet. Start donating!</p>';
     else {
       donations.forEach(d => {
+        const expDate = new Date(d.expiry);
+        const isExpired = expDate < new Date();
         html += `
           <div class="dashboard-card">
             <p><strong>${sanitizeHTML(d.foodName)}</strong> (${sanitizeHTML(d.quantity)})</p>
-            <p>Status: <span class="${d.status === 'Picked' ? 'picked' : 'pending'}">${d.status}</span></p>
-            <p>Expires: ${new Date(d.expiry).toLocaleDateString()}</p>
+            <p>Status: <span class="${d.status === 'Picked' ? 'picked' : 'pending'}">${d.status}</span>
+              ${isExpired ? ' <span style="color:#ef4444; font-size:0.8rem;">(Expired)</span>' : ''}
+            </p>
+            <p>Expires: ${expDate.toLocaleDateString('en-IN')}</p>
           </div>
         `;
       });
@@ -437,10 +584,19 @@ async function fetchUserDonations() {
   } catch (err) { console.error(err); }
 }
 
-
-// ========== CHATBOT (FLOATING) with enhanced AI ==========
+// ========== CHATBOT (FLOATING) ==========
 function setupChatbot() {
-  chatBtn.addEventListener('click', () => chatWindow.classList.toggle('open'));
+  chatBtn.addEventListener('click', () => {
+    chatWindow.classList.toggle('open');
+    if (chatWindow.classList.contains('open')) {
+      // Scroll to bottom and focus input when opened
+      setTimeout(() => {
+        chatMsgs.scrollTop = chatMsgs.scrollHeight;
+        chatInput.focus();
+      }, 100);
+    }
+  });
+
   const chatCloseBtn = document.getElementById('chatCloseBtn');
   if (chatCloseBtn) chatCloseBtn.addEventListener('click', () => chatWindow.classList.remove('open'));
 
@@ -449,6 +605,7 @@ function setupChatbot() {
     msgDiv.classList.add('msg', sender === 'user' ? 'user-msg' : 'bot-msg');
     msgDiv.innerText = text;
     chatMsgs.appendChild(msgDiv);
+    // Always scroll to newest message
     chatMsgs.scrollTop = chatMsgs.scrollHeight;
   }
 
@@ -459,11 +616,10 @@ function setupChatbot() {
     chatMsgs.appendChild(typingDiv);
     chatMsgs.scrollTop = chatMsgs.scrollHeight;
 
-    setTimeout(async () => {
+    getSharedBotReply(userMsg).then(reply => {
       chatMsgs.removeChild(typingDiv);
-      const reply = await getSharedBotReply(userMsg);
       addMessage(reply, 'bot');
-    }, 500);
+    });
   }
 
   function sendMessage() {
@@ -471,14 +627,20 @@ function setupChatbot() {
     if (!txt) return;
     addMessage(txt, 'user');
     chatInput.value = '';
+    chatInput.focus();
     simulateTyping(txt);
   }
 
   sendMsg.addEventListener('click', sendMessage);
   chatInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendMessage(); });
+
+  // Keep chat input visible when focused (scroll chat body, not page)
+  chatInput.addEventListener('focus', () => {
+    setTimeout(() => { chatMsgs.scrollTop = chatMsgs.scrollHeight; }, 150);
+  });
 }
 
-// ========== JARVIS SECTION (same enhanced logic) ==========
+// ========== JARVIS SECTION ==========
 function setupJarvisSection() {
   if (!jarvisSend || !jarvisInput) return;
 
@@ -497,11 +659,10 @@ function setupJarvisSection() {
     jarvisMessages.appendChild(typingDiv);
     jarvisMessages.scrollTop = jarvisMessages.scrollHeight;
 
-    setTimeout(async () => {
+    getSharedBotReply(userMsg).then(reply => {
       jarvisMessages.removeChild(typingDiv);
-      const reply = await getSharedBotReply(userMsg);
       addJarvisMessage(reply, 'bot');
-    }, 500);
+    });
   }
 
   jarvisSend.addEventListener('click', () => {
@@ -514,6 +675,10 @@ function setupJarvisSection() {
 
   jarvisInput.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') { e.preventDefault(); jarvisSend.click(); }
+  });
+
+  jarvisInput.addEventListener('focus', () => {
+    setTimeout(() => { jarvisMessages.scrollTop = jarvisMessages.scrollHeight; }, 150);
   });
 }
 

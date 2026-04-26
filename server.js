@@ -19,8 +19,9 @@ const PORT = process.env.PORT || 5000;
 // Middleware
 app.use(helmet({ contentSecurityPolicy: false })); // Disabled CSP temporarily so external fonts/scripts don't break
 app.use(cors()); // Allow all for local dev/testing
-app.use(express.json({ limit: '10kb' })); // Added payload limit
-app.use(express.urlencoded({ extended: true, limit: '10kb' }));
+app.use(express.json({ limit: '10mb' })); // Larger limit to support base64 image payloads
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
 
 // Rate Limiters
 const authLimiter = rateLimit({
@@ -69,11 +70,9 @@ const donationSchema = new mongoose.Schema({
 const User = mongoose.model('User', userSchema);
 const Donation = mongoose.model('Donation', donationSchema);
 
-// ========== MULTER ==========
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, 'uploads/'),
-  filename: (req, file, cb) => cb(null, Date.now() + '-' + file.originalname)
-});
+// ========== MULTER — Memory Storage ==========
+// Images are stored as base64 data URLs in MongoDB.
+// This makes images persistent across server restarts and Render re-deploys.
 const fileFilter = (req, file, cb) => {
   if (file.mimetype.startsWith('image/')) {
     cb(null, true);
@@ -81,7 +80,12 @@ const fileFilter = (req, file, cb) => {
     cb(new Error('Only image files are allowed!'), false);
   }
 };
-const upload = multer({ storage, fileFilter, limits: { fileSize: 5 * 1024 * 1024 } }); // 5MB limit
+const upload = multer({
+  storage: multer.memoryStorage(), // store in RAM, not disk
+  fileFilter,
+  limits: { fileSize: 5 * 1024 * 1024 } // 5MB limit
+});
+
 
 // ========== AUTH MIDDLEWARE ==========
 const auth = async (req, res, next) => {
@@ -153,9 +157,15 @@ app.post('/api/donate', auth, upload.single('image'), async (req, res) => {
     const now = new Date();
     const expDate = new Date(expiry);
     const hoursDiff = (expDate - now) / (1000 * 60 * 60);
-    const tag = hoursDiff < 2 ? 'Urgent' : 'Fresh';
+    const tag = hoursDiff <= 0 ? 'Expired' : hoursDiff <= 24 ? 'Urgent' : 'Fresh';
 
-    const imagePath = req.file ? `/uploads/${req.file.filename}` : '';
+    // Convert uploaded image to base64 data URL so it's stored in MongoDB
+    // and survives server restarts / Render re-deploys
+    let imageData = '';
+    if (req.file) {
+      const base64 = req.file.buffer.toString('base64');
+      imageData = `data:${req.file.mimetype};base64,${base64}`;
+    }
 
     const donation = new Donation({
       user: req.user._id,
@@ -163,7 +173,7 @@ app.post('/api/donate', auth, upload.single('image'), async (req, res) => {
       quantity,
       location,
       expiry,
-      image: imagePath,
+      image: imageData,
       tag
     });
     await donation.save();
@@ -176,11 +186,26 @@ app.post('/api/donate', auth, upload.single('image'), async (req, res) => {
   }
 });
 
-// Get all donations
+
+// Get all donations (tags recalculated dynamically on every fetch)
 app.get('/api/donations', async (req, res) => {
   try {
     const donations = await Donation.find().populate('user', 'name').sort({ createdAt: -1 });
-    res.json(donations);
+    const now = new Date();
+    const updated = donations.map(d => {
+      const obj = d.toObject();
+      const expDate = new Date(d.expiry);
+      const hoursDiff = (expDate - now) / (1000 * 60 * 60);
+      if (expDate < now) {
+        obj.tag = 'Expired';
+      } else if (hoursDiff <= 24) {
+        obj.tag = 'Urgent';
+      } else {
+        obj.tag = 'Fresh';
+      }
+      return obj;
+    });
+    res.json(updated);
   } catch (err) {
     res.status(500).json({ error: 'Server error' });
   }
@@ -216,10 +241,14 @@ app.post('/api/chat', apiLimiter, async (req, res) => {
     if (!process.env.GEMINI_API_KEY) {
       return res.json({ reply: "I'm currently running in offline mode. Please add your GEMINI_API_KEY to the .env file to activate my AI brain." });
     }
+    // Inject real date so the AI knows today's date/time
+    const now = new Date();
+    const dateStr = now.toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    const timeStr = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
     const response = await ai.models.generateContent({
         model: 'gemini-2.5-flash',
         contents: [
-            { role: 'user', parts: [{ text: `You are Jarvis, a helpful AI assistant for KindPlate (a food donation platform). The user says: "${message}". Keep your reply extremely concise, friendly, and helpful. 1-2 short sentences maximum.` }] }
+            { role: 'user', parts: [{ text: `You are Jarvis, a helpful AI assistant for KindPlate (a food donation platform). Today is ${dateStr} and the current time is ${timeStr} (IST). The user says: "${message}". Keep your reply extremely concise, friendly, and helpful. 1-2 short sentences maximum.` }] }
         ],
     });
     res.json({ reply: response.text });
