@@ -536,6 +536,7 @@
             <option value="Donor">Donor</option>
             <option value="NGO">NGO</option>
             <option value="Volunteer">Volunteer</option>
+            <option value="Receiver">Receiver (Food Assistance)</option>
           </select>
         </div>
         <button type="submit" class="btn btn-primary full-width glow-btn" id="authSubmit">Login</button>
@@ -598,6 +599,23 @@
         </div>
         <button type="submit" class="btn btn-primary full-width glow-btn" style="margin-top: 1rem;">Submit Review</button>
       </form>
+    </div>
+  </div>
+
+  <!-- ═══ VOLUNTEER DESTINATION MODAL ═══ -->
+  <div id="ngoSelectModal" class="modal">
+    <div class="modal-content glass">
+      <span class="close" id="closeNgoModal">&times;</span>
+      <div class="modal-icon"><i class="fas fa-truck"></i></div>
+      <h2>Select Destination</h2>
+      <p class="modal-subtitle">Which NGO are you delivering this to?</p>
+      <div class="form-group" style="margin-top: 1rem;">
+        <label><i class="fas fa-building"></i> Select NGO</label>
+        <select id="ngoDestinationSelect" class="file-input" style="padding: 0.8rem; background: var(--surface2); border: 1px solid var(--border); color: var(--text); border-radius: 0; width: 100%;">
+          <option value="">Loading NGOs...</option>
+        </select>
+      </div>
+      <button class="btn btn-primary full-width glow-btn" id="confirmVolunteerPickupBtn" style="margin-top: 1rem;">Confirm Delivery Route</button>
     </div>
   </div>
 

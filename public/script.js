@@ -319,6 +319,22 @@ function applyRoleBasedView() {
       if (badge) badge.textContent = 'Volunteer Dashboard';
     }
     if (filterSection) filterSection.style.display = '';
+  } else if (currentUser.role === 'Receiver') {
+    if (donateSec) donateSec.style.display = 'none';
+    if (navDonate) navDonate.style.display = 'none';
+    if (navFind) {
+      navFind.style.display = '';
+      navFind.textContent = 'Available Food';
+    }
+    if (myDonationsLink) myDonationsLink.innerHTML = '<i class="fas fa-utensils"></i> Claim History';
+    if (feedSec) {
+      feedSec.style.display = '';
+      const title = feedSec.querySelector('.section-title');
+      const badge = feedSec.querySelector('.section-badge');
+      if (title) title.innerHTML = 'Available <span class="gradient-text">Food Assistance</span>';
+      if (badge) badge.textContent = 'Receiver Dashboard';
+    }
+    if (filterSection) filterSection.style.display = '';
   }
 }
 
@@ -537,35 +553,72 @@ function renderDonations(filter = 'all', search = '') {
 
 function renderFindDonations() {
   if (!findGrid) return;
-  const active = allDonations.filter(d => d.tag !== 'Expired');
-  if (active.length === 0) {
+  let visibleDonations = [];
+  if (!currentUser) {
+    visibleDonations = allDonations.filter(d => d.tag !== 'Expired' && d.status !== 'Consumed');
+  } else if (currentUser.role === 'Receiver') {
+    visibleDonations = allDonations.filter(d => d.tag !== 'Expired' && d.status === 'At NGO');
+  } else if (currentUser.role === 'Volunteer') {
+    visibleDonations = allDonations.filter(d => d.tag !== 'Expired' && d.status === 'Pending');
+  } else if (currentUser.role === 'NGO') {
+    visibleDonations = allDonations.filter(d => 
+      d.tag !== 'Expired' && (d.status === 'Pending' || (d.status === 'In Transit' && d.destinationNgo?._id === currentUser.id))
+    );
+  }
+
+  if (visibleDonations.length === 0) {
     findGrid.innerHTML = '<p class="empty-state" style="grid-column:1/-1; text-align:center; color:var(--text-muted); padding:2rem;">No active food donations at the moment.</p>';
     return;
   }
+  
   let html = '';
-  active.forEach(d => {
-    const statusClass = d.status === 'Picked' ? 'tag-expired' : (d.tag === 'Urgent' ? 'tag-urgent' : 'tag-fresh');
-    const expiryInfo = formatExpiryTime(d.expiry);
-    let pickedByHtml = '';
+  visibleDonations.forEach(d => {
+    let statusClass = 'tag-fresh';
+    let statusLabel = d.tag;
+    if (d.status === 'In Transit') { statusClass = 'tag-urgent'; statusLabel = 'In Transit'; }
+    if (d.status === 'At NGO') { statusClass = 'tag-expired'; statusLabel = 'Available at NGO'; }
+    if (d.status === 'Consumed') { statusClass = 'tag-expired'; statusLabel = 'Claimed'; }
     
-    if (d.status === 'Picked' && d.pickedBy) {
-      pickedByHtml = `
+    const expiryInfo = formatExpiryTime(d.expiry);
+    let extraInfoHtml = '';
+    let actionBtnHtml = '';
+    
+    if (d.status === 'In Transit' && d.pickedBy) {
+      extraInfoHtml = `
         <div class="picked-by-info">
-          <strong><i class="fas fa-hand-holding-heart"></i> Accepted by <a href="javascript:void(0)" onclick="openProfile('${d.pickedBy._id}')" style="color: var(--green);">${d.pickedBy.name}</a></strong>
-          <p><i class="fas fa-envelope"></i> ${d.pickedBy.email}</p>
-          ${d.pickupLocation ? `
-            <a class="view-map-link" onclick="viewLocationOnMap(${d.pickupLocation.lat}, ${d.pickupLocation.lng}, \`${sanitizeHTML(d.pickupLocation.address)}\`)">
-              <i class="fas fa-location-dot"></i> View Pickup Point
-            </a>
-          ` : ''}
+          <strong><i class="fas fa-truck"></i> Delivering by <a href="javascript:void(0)" onclick="openProfile('${d.pickedBy._id}')" style="color: var(--green);">${d.pickedBy.name}</a></strong>
+        </div>
+      `;
+    } else if (d.status === 'At NGO' && d.destinationNgo) {
+      extraInfoHtml = `
+        <div class="picked-by-info">
+          <strong><i class="fas fa-building"></i> Available at: ${d.destinationNgo.name}</strong>
+          <p><i class="fas fa-envelope"></i> ${d.destinationNgo.email}</p>
         </div>
       `;
     }
+
+    if (currentUser) {
+      if (currentUser.role === 'Volunteer' && d.status === 'Pending') {
+        actionBtnHtml = `<button class="request-btn" data-id="${d._id}" data-action="accept-delivery"><i class="fas fa-route"></i> Accept Delivery Route</button>`;
+      } else if (currentUser.role === 'NGO') {
+        if (d.status === 'Pending') {
+          actionBtnHtml = `<button class="request-btn" data-id="${d._id}" data-action="claim-ngo"><i class="fas fa-hand-holding-heart"></i> Claim for Organization</button>`;
+        } else if (d.status === 'In Transit' && d.destinationNgo?._id === currentUser.id) {
+          actionBtnHtml = `<button class="request-btn" data-id="${d._id}" data-action="mark-received" style="background: var(--green);"><i class="fas fa-check"></i> Mark Received</button>`;
+        }
+      } else if (currentUser.role === 'Receiver' && d.status === 'At NGO') {
+        actionBtnHtml = `<button class="request-btn" data-id="${d._id}" data-action="consume-food" style="background: var(--gold); color: black;"><i class="fas fa-utensils"></i> I Need This</button>`;
+      }
+    } else {
+      actionBtnHtml = `<button class="request-btn" onclick="document.getElementById('loginBtn').click()"><i class="fas fa-lock"></i> Login to Claim</button>`;
+    }
+
     html += `
       <div class="card reveal">
         <div class="card-img-wrap">${imgTag(d.image, d.foodName)}</div>
         <div class="card-content">
-          <span class="card-tag ${statusClass}">${d.status === 'Picked' ? 'Claimed' : d.tag}</span>
+          <span class="card-tag ${statusClass}">${statusLabel}</span>
           <h3>${sanitizeHTML(d.foodName)}</h3>
           <p style="font-size: 0.85rem; margin-top: 4px; color: var(--text-muted);">
             Posted by <a href="javascript:void(0)" onclick="openProfile('${d.user._id}')" style="color: var(--green); font-weight: 500;">${d.user.name}</a>
@@ -577,13 +630,8 @@ function renderFindDonations() {
           <p class="expiry-timer ${expiryInfo.color}" data-expiry="${d.expiry}" style="font-size:0.82rem; margin-top:4px; font-weight: 500;">
             ${expiryInfo.text}
           </p>
-          ${pickedByHtml}
-          ${d.status === 'Pending' 
-            ? `<button class="request-btn" data-id="${d._id}">
-                 <i class="fas fa-${currentUser?.role === 'Volunteer' ? 'route' : 'hand-holding-heart'}"></i> 
-                 ${currentUser?.role === 'Volunteer' ? 'Accept Delivery Route' : 'Claim for Organization'}
-               </button>` 
-            : ''}
+          ${extraInfoHtml}
+          ${actionBtnHtml}
         </div>
       </div>
     `;
@@ -595,10 +643,82 @@ function renderFindDonations() {
 
 function attachRequestButtons() {
   document.querySelectorAll('.request-btn:not([disabled])').forEach(btn => {
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', async () => {
+      if (!currentUser) return;
       const id = btn.dataset.id;
-      openMapForPickup(id);
+      const action = btn.dataset.action;
+
+      if (action === 'accept-delivery') {
+        // Volunteer accepts delivery, open NGO selection modal
+        currentDonationIdForMap = id; // reuse this variable to track the donation
+        openNgoModal();
+      } else if (action === 'claim-ngo') {
+        // NGO claims directly from pending
+        await processLogisticsAction(`/api/request-pickup/${id}`, 'POST', {}, 'Claimed successfully for your NGO!');
+      } else if (action === 'mark-received') {
+        // NGO marks transit delivery as received
+        await processLogisticsAction(`/api/receive-food/${id}`, 'POST', {}, 'Food marked as received!');
+      } else if (action === 'consume-food') {
+        // Receiver gets food from NGO
+        await processLogisticsAction(`/api/consume-food/${id}`, 'POST', {}, 'Food successfully claimed! Enjoy your meal.');
+      }
     });
+  });
+}
+
+async function processLogisticsAction(endpoint, method, body, successMsg) {
+  try {
+    const res = await fetch(endpoint, {
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: Object.keys(body).length > 0 ? JSON.stringify(body) : undefined
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+    showToast(successMsg, 'success');
+    fetchDonations();
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+}
+
+// ========== VOLUNTEER NGO SELECTION LOGIC ==========
+const ngoSelectModal = document.getElementById('ngoSelectModal');
+const closeNgoModalBtn = document.getElementById('closeNgoModal');
+const ngoDestinationSelect = document.getElementById('ngoDestinationSelect');
+const confirmVolunteerPickupBtn = document.getElementById('confirmVolunteerPickupBtn');
+
+async function openNgoModal() {
+  ngoSelectModal.style.display = 'flex';
+  try {
+    const res = await fetch('/api/ngos', { headers: { 'Authorization': `Bearer ${token}` } });
+    const ngos = await res.json();
+    ngoDestinationSelect.innerHTML = '<option value="">Select an NGO destination...</option>';
+    ngos.forEach(ngo => {
+      ngoDestinationSelect.innerHTML += `<option value="${ngo._id}">${ngo.name} (${ngo.email})</option>`;
+    });
+  } catch (err) {
+    showToast('Failed to load NGOs', 'error');
+  }
+}
+
+if (closeNgoModalBtn) {
+  closeNgoModalBtn.addEventListener('click', () => ngoSelectModal.style.display = 'none');
+}
+
+if (confirmVolunteerPickupBtn) {
+  confirmVolunteerPickupBtn.addEventListener('click', async () => {
+    const ngoId = ngoDestinationSelect.value;
+    if (!ngoId) {
+      showToast('Please select a destination NGO', 'error');
+      return;
+    }
+    ngoSelectModal.style.display = 'none';
+    // We can still trigger openMapForPickup if you want location tracking, but let's keep it simple and just do the API call.
+    await processLogisticsAction(`/api/request-pickup/${currentDonationIdForMap}`, 'POST', { destinationNgoId: ngoId }, 'Delivery route accepted!');
   });
 }
 

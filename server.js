@@ -55,7 +55,7 @@ const userSchema = new mongoose.Schema({
   name: { type: String, required: true },
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
-  role: { type: String, enum: ['Donor', 'NGO', 'Volunteer'], default: 'Donor' },
+  role: { type: String, enum: ['Donor', 'NGO', 'Volunteer', 'Receiver'], default: 'Donor' },
 }, { timestamps: true });
 
 const donationSchema = new mongoose.Schema({
@@ -66,8 +66,9 @@ const donationSchema = new mongoose.Schema({
   expiry: { type: Date, required: true },
   image: { type: String, default: '' },
   tag: { type: String, enum: ['Fresh', 'Urgent'], default: 'Fresh' },
-  status: { type: String, enum: ['Pending', 'Picked'], default: 'Pending' },
+  status: { type: String, enum: ['Pending', 'Picked', 'In Transit', 'At NGO', 'Consumed'], default: 'Pending' },
   pickedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  destinationNgo: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   pickupLocation: { lat: Number, lng: Number, address: String },
   createdAt: { type: Date, default: Date.now }
 });
@@ -281,7 +282,7 @@ app.post('/api/donate', auth, upload.single('image'), async (req, res) => {
 // Get all donations (tags recalculated dynamically on every fetch)
 app.get('/api/donations', async (req, res) => {
   try {
-    const donations = await Donation.find().populate('user', 'name').populate('pickedBy', 'name email role').sort({ createdAt: -1 });
+    const donations = await Donation.find().populate('user', 'name').populate('pickedBy', 'name email role').populate('destinationNgo', 'name').sort({ createdAt: -1 });
     const now = new Date();
     const updated = donations.map(d => {
       const obj = d.toObject();
@@ -305,29 +306,82 @@ app.get('/api/donations', async (req, res) => {
 // Get user's donations
 app.get('/api/my-donations', auth, async (req, res) => {
   try {
-    const donations = await Donation.find({ user: req.user._id }).populate('pickedBy', 'name email role').sort({ createdAt: -1 });
+    const donations = await Donation.find({ user: req.user._id }).populate('pickedBy', 'name email role').populate('destinationNgo', 'name').sort({ createdAt: -1 });
     res.json(donations);
   } catch (err) {
     res.status(500).json({ error: 'Server error' });
   }
 });
 
-// Request pickup (update status and location)
+// Get list of NGOs for Volunteers to deliver to
+app.get('/api/ngos', auth, async (req, res) => {
+  try {
+    const ngos = await User.find({ role: 'NGO' }).select('name email');
+    res.json(ngos);
+  } catch (err) {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Request pickup (Volunteer picks up, or NGO claims directly)
 app.post('/api/request-pickup/:id', authLimiter, auth, async (req, res) => {
   try {
-    const { lat, lng, address } = req.body;
+    const { lat, lng, address, destinationNgoId } = req.body;
     const donation = await Donation.findById(req.params.id);
     if (!donation) return res.status(404).json({ error: 'Not found' });
-    if (donation.status === 'Picked') return res.status(400).json({ error: 'Already picked up' });
+    if (donation.status !== 'Pending') return res.status(400).json({ error: 'Donation is no longer available' });
     
-    donation.status = 'Picked';
     donation.pickedBy = req.user._id;
     if (lat && lng) {
       donation.pickupLocation = { lat, lng, address: address || 'Location shared' };
     }
+
+    if (req.user.role === 'Volunteer') {
+      if (!destinationNgoId) return res.status(400).json({ error: 'Please select an NGO destination' });
+      donation.status = 'In Transit';
+      donation.destinationNgo = destinationNgoId;
+    } else if (req.user.role === 'NGO') {
+      donation.status = 'At NGO';
+      donation.destinationNgo = req.user._id;
+    } else {
+      return res.status(403).json({ error: 'Only Volunteers and NGOs can pick up food from Donors.' });
+    }
     
     await donation.save();
     res.json({ message: 'Pickup requested successfully' });
+  } catch (err) {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// NGO receives food from Volunteer
+app.post('/api/receive-food/:id', authLimiter, auth, async (req, res) => {
+  try {
+    if (req.user.role !== 'NGO') return res.status(403).json({ error: 'Only NGOs can receive food' });
+    const donation = await Donation.findById(req.params.id);
+    if (!donation) return res.status(404).json({ error: 'Not found' });
+    if (donation.status !== 'In Transit' || donation.destinationNgo.toString() !== req.user._id.toString()) {
+      return res.status(400).json({ error: 'This donation is not inbound to your NGO' });
+    }
+    
+    donation.status = 'At NGO';
+    await donation.save();
+    res.json({ message: 'Food marked as Received! It is now available for Receivers.' });
+  } catch (err) {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Receiver gets the food from NGO
+app.post('/api/consume-food/:id', authLimiter, auth, async (req, res) => {
+  try {
+    const donation = await Donation.findById(req.params.id);
+    if (!donation) return res.status(404).json({ error: 'Not found' });
+    if (donation.status !== 'At NGO') return res.status(400).json({ error: 'Food is not available at NGO' });
+    
+    donation.status = 'Consumed';
+    await donation.save();
+    res.json({ message: 'Food successfully claimed! Enjoy your meal.' });
   } catch (err) {
     res.status(500).json({ error: 'Server error' });
   }
