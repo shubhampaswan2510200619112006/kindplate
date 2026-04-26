@@ -9,6 +9,9 @@ const cors = require('cors');
 const fs = require('fs');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+const compression = require('compression');
+const cloudinary = require('cloudinary').v2;
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const { GoogleGenAI } = require('@google/genai');
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || 'MISSING_KEY' });
@@ -17,9 +20,10 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Middleware
+app.use(compression()); // Gzip compression for performance
 app.use(helmet({ contentSecurityPolicy: false })); // Disabled CSP temporarily so external fonts/scripts don't break
 app.use(cors()); // Allow all for local dev/testing
-app.use(express.json({ limit: '10mb' })); // Larger limit to support base64 image payloads
+app.use(express.json({ limit: '10mb' })); // Larger limit to support base64 image payloads if fallback happens
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 
@@ -79,13 +83,18 @@ const reviewSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 });
 
+// Production Indexes for Performance
+userSchema.index({ email: 1 });
+donationSchema.index({ status: 1, createdAt: -1 });
+donationSchema.index({ user: 1 });
+donationSchema.index({ pickedBy: 1 });
+reviewSchema.index({ toUser: 1 });
+
 const User = mongoose.model('User', userSchema);
 const Donation = mongoose.model('Donation', donationSchema);
 const Review = mongoose.model('Review', reviewSchema);
 
-// ========== MULTER — Memory Storage ==========
-// Images are stored as base64 data URLs in MongoDB.
-// This makes images persistent across server restarts and Render re-deploys.
+// ========== MULTER — Cloudinary / Memory Fallback ==========
 const fileFilter = (req, file, cb) => {
   if (file.mimetype.startsWith('image/')) {
     cb(null, true);
@@ -93,8 +102,21 @@ const fileFilter = (req, file, cb) => {
     cb(new Error('Only image files are allowed!'), false);
   }
 };
+
+let storage;
+if (process.env.CLOUDINARY_URL) {
+  // Production: Direct to Cloudinary
+  storage = new CloudinaryStorage({
+    cloudinary: cloudinary,
+    params: { folder: 'kindplate', allowed_formats: ['jpg', 'jpeg', 'png', 'webp'] }
+  });
+} else {
+  // Fallback: Memory Storage (base64)
+  storage = multer.memoryStorage();
+}
+
 const upload = multer({
-  storage: multer.memoryStorage(), // store in RAM, not disk
+  storage: storage,
   fileFilter,
   limits: { fileSize: 5 * 1024 * 1024 } // 5MB limit
 });
@@ -215,12 +237,16 @@ app.post('/api/donate', auth, upload.single('image'), async (req, res) => {
     const hoursDiff = (expDate - now) / (1000 * 60 * 60);
     const tag = hoursDiff <= 0 ? 'Expired' : hoursDiff <= 24 ? 'Urgent' : 'Fresh';
 
-    // Convert uploaded image to base64 data URL so it's stored in MongoDB
-    // and survives server restarts / Render re-deploys
     let imageData = '';
     if (req.file) {
-      const base64 = req.file.buffer.toString('base64');
-      imageData = `data:${req.file.mimetype};base64,${base64}`;
+      if (req.file.path) {
+        // Cloudinary URL
+        imageData = req.file.path;
+      } else if (req.file.buffer) {
+        // Memory fallback (base64)
+        const base64 = req.file.buffer.toString('base64');
+        imageData = `data:${req.file.mimetype};base64,${base64}`;
+      }
     }
 
     const donation = new Donation({
@@ -406,6 +432,17 @@ app.get('/api/user/:id/profile', async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: 'Server error' });
   }
+});
+
+// ========== GLOBAL ERROR HANDLER ==========
+app.use((err, req, res, next) => {
+  console.error('Unhandled Error:', err);
+  if (err instanceof multer.MulterError) {
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      return res.status(400).json({ error: 'File too large. Maximum size is 5MB.' });
+    }
+  }
+  res.status(500).json({ error: 'Internal Server Error' });
 });
 
 app.listen(PORT, () => {

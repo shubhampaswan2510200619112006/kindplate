@@ -244,8 +244,10 @@ function showLoggedInState(name, impactCount = 0) {
     analyticsCount.textContent = impactCount;
     if (currentUser?.role === 'Donor') {
       analyticsLabel.textContent = 'Donations Posted';
+    } else if (currentUser?.role === 'NGO') {
+      analyticsLabel.textContent = 'Organizational Pickups';
     } else {
-      analyticsLabel.textContent = 'Pickups Completed';
+      analyticsLabel.textContent = 'Deliveries Completed';
     }
   }
   
@@ -276,9 +278,25 @@ function applyRoleBasedView() {
     if (donateSec) donateSec.style.display = '';
     if (feedSec) feedSec.style.display = 'none';
     if (filterSection) filterSection.style.display = 'none';
-  } else if (currentUser.role === 'NGO' || currentUser.role === 'Volunteer') {
+  } else if (currentUser.role === 'NGO') {
     if (donateSec) donateSec.style.display = 'none';
-    if (feedSec) feedSec.style.display = '';
+    if (feedSec) {
+      feedSec.style.display = '';
+      const title = feedSec.querySelector('.section-title');
+      const badge = feedSec.querySelector('.section-badge');
+      if (title) title.innerHTML = 'Bulk Requirements & <span class="gradient-text">Donations</span>';
+      if (badge) badge.textContent = 'Organizational Dashboard';
+    }
+    if (filterSection) filterSection.style.display = '';
+  } else if (currentUser.role === 'Volunteer') {
+    if (donateSec) donateSec.style.display = 'none';
+    if (feedSec) {
+      feedSec.style.display = '';
+      const title = feedSec.querySelector('.section-title');
+      const badge = feedSec.querySelector('.section-badge');
+      if (title) title.innerHTML = 'Live Delivery <span class="gradient-text">Routes</span>';
+      if (badge) badge.textContent = 'Volunteer Dashboard';
+    }
     if (filterSection) filterSection.style.display = '';
   }
 }
@@ -539,7 +557,12 @@ function renderFindDonations() {
             ${expiryInfo.text}
           </p>
           ${pickedByHtml}
-          ${d.status === 'Pending' ? `<button class="request-btn" data-id="${d._id}"><i class="fas fa-hand-holding-heart"></i> Request Pickup</button>` : ''}
+          ${d.status === 'Pending' 
+            ? `<button class="request-btn" data-id="${d._id}">
+                 <i class="fas fa-${currentUser?.role === 'Volunteer' ? 'route' : 'hand-holding-heart'}"></i> 
+                 ${currentUser?.role === 'Volunteer' ? 'Accept Delivery Route' : 'Claim for Organization'}
+               </button>` 
+            : ''}
         </div>
       </div>
     `;
